@@ -8,17 +8,10 @@ export class EmailNotificationService implements NotificationService {
       .map((seat: Seat) => seat.getId())
       .join(", ");
 
-    console.log(
-      "[Email to " +
-        user.getEmail() +
-        "] Booking " +
-        booking.getId() +
-        ' confirmed for "' +
-        booking.getShow().getMovie().getTitle() +
-        '". Seats: ' +
-        seatIds +
-        ". Amount: " +
-        booking.getAmount().toDisplayString(),
-    );
+    console.log(`[Email Notification to: ${user.getEmail()}]`);
+    console.log("Subject: Booking Confirmed!");
+    console.log("Movie:", booking.getShow().getMovie().getTitle());
+    console.log("Seats:", seatIds);
+    console.log("Total Amount paid:", booking.getAmount().toDisplayString());
   }
 }

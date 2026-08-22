@@ -68,11 +68,10 @@ const result: BookingResult = bookingService.book(
 
 if (result.isOk()) {
   const booking = result.getBooking();
-  console.log(
-    "Booking successful:",
-    booking?.getId(),
-    booking?.getAmount().toDisplayString(),
-  );
+  console.log("Booking successful!");
+  console.log("Booking ID:", booking?.getId());
+  console.log("Total Amount:", booking?.getAmount().toDisplayString());
 } else {
-  console.log("Booking failed:", result.getErrorMessage());
+  console.log("Booking failed!");
+  console.log("Error:", result.getErrorMessage());
 }
