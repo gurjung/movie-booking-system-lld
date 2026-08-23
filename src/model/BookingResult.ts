@@ -32,6 +32,6 @@ export class BookingResult {
   }
 
   public static fail(errorMessage: string) {
-    return new BookingResult(true, null, errorMessage);
+    return new BookingResult(false, null, errorMessage);
   }
 }
