@@ -13,7 +13,8 @@ import { BookingRepository } from "./repository/BookingRepository";
 import { BookingService } from "./service/BookingService";
 import { EmailNotificationService } from "./serviceimpl/notification/EmailNotification";
 import { MockPaymentGateway } from "./serviceimpl/payment-gateway/MockPaymentGateway";
-import { DefaultPricingStrategy } from "./serviceimpl/pricing/DefaultPricing";
+// import { DefaultPricingStrategy } from "./serviceimpl/pricing/DefaultPricing";
+import { PeakHourPricingStrategy } from "./serviceimpl/pricing/PeakHourPricing";
 import { InMemorySeatAllocationStrategy } from "./serviceimpl/seatAllocation/InMemorySeatAllocation";
 
 // movie
@@ -50,7 +51,7 @@ const u1 = new User(
 );
 
 const bookingService: BookingService = new BookingService(
-  new DefaultPricingStrategy(),
+  new PeakHourPricingStrategy(),
   new InMemorySeatAllocationStrategy(),
   new MockPaymentGateway(),
   new BookingRepository(),
