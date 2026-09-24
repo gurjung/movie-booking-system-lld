@@ -29,5 +29,20 @@ export class Theater {
   public setName(name: string): void {
     this.name = name;
   }
-  // TO DO use address and screen
+
+  public getAddress(): Address {
+    return this.address;
+  }
+
+  public setAddress(address: Address): void {
+    this.address = address;
+  }
+
+  public getScreens(): Screen[] {
+    return this.screens;
+  }
+
+  public setScreens(screens: Screen[]): void {
+    this.screens = screens;
+  }
 }
