@@ -46,10 +46,6 @@ export class Snack {
     return this.complimentary;
   }
 
-  public getComplimentary(): boolean {
-    return this.complimentary;
-  }
-
   public setComplimentary(complimentary: boolean): void {
     this.complimentary = complimentary;
   }

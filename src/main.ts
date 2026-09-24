@@ -18,7 +18,7 @@ import { EmailNotificationService } from "./serviceimpl/notification/EmailNotifi
 import { MockPaymentGateway } from "./serviceimpl/payment-gateway/MockPaymentGateway";
 import { PeakHourPricingStrategy } from "./serviceimpl/pricing/PeakHourPricing";
 import { VIPPricingStrategy } from "./serviceimpl/pricing/VIPPricingStrategy";
-import { SimpleTicketFactory } from "./serviceimpl/RegistryTicketFactory";
+import { SimpleTicketFactory } from "./serviceimpl/SimpleTicketFactory";
 import { RegularBookingBuilder } from "./serviceimpl/RegularBookingBuilder";
 import { InMemorySeatAllocationStrategy } from "./serviceimpl/seatAllocation/InMemorySeatAllocation";
 import { VIPBookingBuilder } from "./serviceimpl/VIPBookingBuilder";

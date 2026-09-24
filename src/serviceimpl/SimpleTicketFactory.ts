@@ -25,5 +25,3 @@ export class SimpleTicketFactory implements TicketFactory {
     }
   }
 }
-
-export { SimpleTicketFactory as RegistryTicketFactory };
