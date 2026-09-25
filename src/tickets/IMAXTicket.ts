@@ -16,7 +16,11 @@ export class IMAXTicket extends Ticket {
   }
 
   public getAmenities(): string[] {
-    return ["IMAX Curved Screen", "Laser Projection", "12-Channel Immersive Sound"];
+    return [
+      "IMAX Curved Screen",
+      "Laser Projection",
+      "12-Channel Immersive Sound",
+    ];
   }
 
   public getAllowedSeatTypes(): SeatType[] {
