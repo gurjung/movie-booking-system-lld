@@ -11,17 +11,26 @@ The project follows clean architectural boundaries by separating data structures
 ### Design Patterns Used
 
 #### Creational Patterns
-1. **Simple Factory Pattern**: 
+
+1. **Simple Factory Pattern**:
    - **Ticket Factory** (`TicketFactory`, `SimpleTicketFactory`): Encapsulates polymorphic creation of `Ticket` subclasses (`StandardTicket`, `PremiumTicket`, `IMAXTicket`, `ReclinerTicket`) based on `TicketType` and seat validation.
-2. **Builder Pattern**: 
+2. **Builder Pattern**:
    - **Booking Builders** (`BookingBuilder`, `RegularBookingBuilder`, `VIPBookingBuilder`): Separates the step-by-step construction of complex `Booking` objects from their representation. Supports fluent addition of tickets, snacks, coupons, loyalty points, and special requests, with validation before instantiating immutable bookings. `VIPBookingBuilder` enforces VIP-specific invariants (disallowing standard tickets, auto-injecting complimentary welcome snacks).
-3. **Singleton Pattern**: 
+3. **Singleton Pattern**:
    - **Logger** (`Logger` implementing `LoggingService`): A lazily initialized, shared logging instance accessed via `Logger.getInstance()` and injected into `BookingService` via constructor injection to maintain testability.
 
-#### Behavioral & Structural Patterns
-1. **Strategy Pattern**: 
+#### Structural Patterns
+
+1. **Decorator Pattern**:
+   - **Snack Add-ons** (`ISnack`, `BaseSnack`, `Popcorn`, `Soda`, `Nachos`, `SnackDecorator`, `LargeSizeDecorator`, `ExtraButterDecorator`, `ComboWrapDecorator`, `GlutenFreePackagingDecorator`): Encapsulates dynamic snack customization and pricing without subclass explosion. Correctly aggregates dynamic pricing, preparation time, and dietary tags (`vegetarian`, `contains-dairy`, `combo-deal`, `gluten-free-certified`).
+2. **Composite Pattern**:
+   - **Theater Layout Hierarchy** (`SeatComponent`, `Seat`, `Row`, `Screen`): Establishes a 3-tier hierarchy (`Screen` → `Row` → `Seat`) allowing uniform operations across leaf nodes and composite containers. Supports contiguous seat search, atomic multi-seat reservation, row-level stats, screen-wide occupancy calculation, and batch price adjustments.
+
+#### Behavioral Patterns
+
+1. **Strategy Pattern**:
    - **Pricing**: Dynamic calculation using pricing strategies (`DefaultPricingStrategy`, `PeakHourPricingStrategy`, `VIPPricingStrategy`).
-   - **Seat Allocation**: Pluggable allocation mechanisms (`InMemorySeatAllocationStrategy`).
+   - **Seat Allocation**: Pluggable allocation mechanisms (`InMemorySeatAllocationStrategy`, `CompositeSeatAllocationStrategy`).
    - **Payment Gateway**: Decoupled interface to easily swap between gateways (`MockPaymentGateway`).
    - **Notification Service**: Flexible notification delivery (`EmailNotificationService`).
 2. **Repository Pattern**: Abstracted persistence using an in-memory data store for `Booking` objects (`BookingRepository`).
@@ -34,15 +43,16 @@ The project follows clean architectural boundaries by separating data structures
 ```text
 src/
 ├── enums/            # Domain-specific enumerations (SeatType, TicketType, BookingStatus, SeatStatus)
-├── interfaces/       # Strategy definitions, factory, builder, and logging interfaces
-├── model/            # Core domain entities (User, Movie, Seat, Show, Booking, Snack, Coupon, etc.)
+├── interfaces/       # Strategy definitions, factory, builder, snack, and seat component interfaces
+├── model/            # Core domain entities (User, Movie, Seat, Row, Show, Screen, Booking, Snack, Coupon, etc.)
 ├── repository/       # Data access and storage layers (BookingRepository)
 ├── service/          # Core orchestrator business logic (BookingService)
 ├── serviceimpl/      # Concrete implementations (strategies, ticket factory, booking builders, logger)
 │   ├── notification/ # Notification implementations (EmailNotification)
 │   ├── payment-gateway/ # Payment gateway implementations (MockPaymentGateway)
 │   ├── pricing/      # Pricing strategies (DefaultPricing, PeakHourPricing, VIPPricingStrategy)
-│   └── seatAllocation/ # Seat allocation strategies (InMemorySeatAllocation)
+│   └── seatAllocation/ # Seat allocation strategies (InMemorySeatAllocation, CompositeSeatAllocation)
+├── snacks/           # Snack components and decorators (Popcorn, Soda, Nachos, ExtraButter, etc.)
 ├── tickets/          # Polymorphic ticket hierarchy (Ticket, StandardTicket, PremiumTicket, etc.)
 └── main.ts           # Composition root, dependency wiring, and demo scenarios
 ```
@@ -52,16 +62,21 @@ src/
 ## ⚙️ Getting Started
 
 ### Prerequisites
+
 - [Node.js](https://nodejs.org/) (v16+)
 
 ### Installation
+
 Clone the repository and install the development dependencies:
+
 ```bash
 npm install
 ```
 
 ### Run the Application
-To run the main execution workflow (demonstrates Regular Booking, VIP Booking with auto-complimentary snacks, and VIP validation error handling):
+
+To run the main execution workflow (demonstrating all 6 demo scenarios: Regular Booking, VIP Booking with auto-complimentary snacks, VIP validation error handling, Decorator snack composition, Composite theater layout reservation, and integrated end-to-end booking):
+
 ```bash
 npm start
 ```
@@ -540,6 +555,239 @@ BookingService "1" o--> "1" BookingRepository
 BookingService "1" o--> "1" NotificationService
 BookingService "1" o--> "1" LoggingService
 
+@enduml
+```
+
+### Decorator Pattern Class Diagram (Snack Add-ons)
+
+```plantuml
+@startuml
+skinparam classAttributeIconSize 0
+skinparam roundcorner 8
+skinparam shadowing false
+skinparam monochrome true
+
+interface ISnack <<interface>> {
+    +getId(): string
+    +getName(): string
+    +getPrice(): Money
+    +getPrepTime(): number
+    +getDietaryTags(): Set<string>
+    +getDescription(): string
+    +isComplimentary(): boolean
+}
+
+abstract class BaseSnack {
+    #id: string
+    #name: string
+    #price: Money
+    #prepTime: number
+    #dietaryTags: Set<string>
+    #description: string
+    #complimentary: boolean
+    +getId(): string
+    +getName(): string
+    +getPrice(): Money
+    +getPrepTime(): number
+    +getDietaryTags(): Set<string>
+    +getDescription(): string
+    +isComplimentary(): boolean
+}
+
+class Popcorn {
+    +Popcorn(id?: string, price?: Money)
+}
+
+class Soda {
+    +Soda(id?: string, price?: Money)
+}
+
+class Nachos {
+    +Nachos(id?: string, price?: Money)
+}
+
+abstract class SnackDecorator {
+    #inner: ISnack
+    +SnackDecorator(inner: ISnack)
+    +getId(): string
+    +getName(): string
+    +getPrice(): Money
+    +getPrepTime(): number
+    +getDietaryTags(): Set<string>
+    +getDescription(): string
+    +isComplimentary(): boolean
+}
+
+class LargeSizeDecorator {
+    +LargeSizeDecorator(inner: ISnack)
+    +getPrice(): Money
+    +getPrepTime(): number
+    +getDescription(): string
+}
+
+class ExtraButterDecorator {
+    +ExtraButterDecorator(inner: ISnack)
+    +getPrice(): Money
+    +getPrepTime(): number
+    +getDietaryTags(): Set<string>
+    +getDescription(): string
+}
+
+class ComboWrapDecorator {
+    +ComboWrapDecorator(inner: ISnack)
+    +getPrice(): Money
+    +getPrepTime(): number
+    +getDietaryTags(): Set<string>
+    +getDescription(): string
+}
+
+class GlutenFreePackagingDecorator {
+    +GlutenFreePackagingDecorator(inner: ISnack)
+    +getPrice(): Money
+    +getDietaryTags(): Set<string>
+    +getDescription(): string
+}
+
+ISnack <|.. BaseSnack
+ISnack <|.. SnackDecorator
+
+BaseSnack <|-- Popcorn
+BaseSnack <|-- Soda
+BaseSnack <|-- Nachos
+
+SnackDecorator <|-- LargeSizeDecorator
+SnackDecorator <|-- ExtraButterDecorator
+SnackDecorator <|-- ComboWrapDecorator
+SnackDecorator <|-- GlutenFreePackagingDecorator
+
+SnackDecorator o--> "1" ISnack : inner
+@enduml
+```
+
+### Composite Pattern Class Diagram (Theater Layout & Domain Integration)
+
+```plantuml
+@startuml
+skinparam classAttributeIconSize 0
+skinparam roundcorner 8
+skinparam shadowing false
+skinparam monochrome true
+
+interface SeatComponent <<interface>> {
+    +getId(): string
+    +getAvailableCount(): number
+    +getTotalCount(): number
+    +findAvailableSeats(count: number, contiguousOnly: boolean, preferredType?: SeatType): Seat[]
+    +reserveSeats(seatIds: string[]): boolean
+    +releaseSeats(seatIds: string[]): void
+    +getPriceSum(): number
+    +applyPriceAdjustment(predicate: (seat: Seat) => boolean, delta: number): void
+    +getOccupancyRate(): number
+}
+
+class Seat <<Leaf>> {
+    -id: string
+    -type: SeatType
+    -row: number
+    -number: number
+    -priceModifier: number
+    -isAvailable: boolean
+    +getId(): string
+    +getType(): SeatType
+    +getRow(): number
+    +getNumber(): number
+    +getPriceModifier(): number
+    +setPriceModifier(delta: number): void
+    +isSeatAvailable(): boolean
+    +setAvailable(status: boolean): void
+    +getAvailableCount(): number
+    +getTotalCount(): number
+    +findAvailableSeats(count: number, contiguousOnly: boolean, preferredType?: SeatType): Seat[]
+    +reserveSeats(seatIds: string[]): boolean
+    +releaseSeats(seatIds: string[]): void
+    +getPriceSum(): number
+    +applyPriceAdjustment(predicate: (seat: Seat) => boolean, delta: number): void
+    +getOccupancyRate(): number
+}
+
+class Row <<Composite>> {
+    -id: string
+    -rowNumber: number
+    -seats: Seat[]
+    +getId(): string
+    +getRowNumber(): number
+    +getSeats(): Seat[]
+    +addSeat(seat: Seat): void
+    +getAvailableCount(): number
+    +getTotalCount(): number
+    +getOccupancyRate(): number
+    +findAvailableSeats(count: number, contiguousOnly: boolean, preferredType?: SeatType): Seat[]
+    +reserveSeats(seatIds: string[]): boolean
+    +releaseSeats(seatIds: string[]): void
+    +getPriceSum(): number
+    +applyPriceAdjustment(predicate: (seat: Seat) => boolean, delta: number): void
+}
+
+class Screen <<Composite Root>> {
+    -id: string
+    -name: string
+    -rows: Row[]
+    +getId(): string
+    +getName(): string
+    +getRows(): Row[]
+    +addRow(row: Row): void
+    +getSeats(): Seat[]
+    +getAvailableCount(): number
+    +getTotalCount(): number
+    +getOccupancyRate(): number
+    +findAvailableSeats(count: number, contiguousOnly: boolean, preferredType?: SeatType): Seat[]
+    +reserveSeats(seatIds: string[]): boolean
+    +releaseSeats(seatIds: string[]): void
+    +getPriceSum(): number
+    +applyPriceAdjustment(predicate: (seat: Seat) => boolean, delta: number): void
+}
+
+SeatComponent <|.. Seat
+SeatComponent <|.. Row
+SeatComponent <|.. Screen
+
+Screen *--> "*" Row : rows
+Row *--> "*" Seat : seats
+
+class Show {
+    -id: string
+    -movie: Movie
+    -screen: Screen
+    -startTime: Date
+    -endTime: Date
+    +getScreen(): Screen
+}
+
+class Booking {
+    -id: string
+    -seats: Seat[]
+    -snacks: ISnack[]
+    -status: BookingStatus
+    -amount: Money
+    +getSeats(): Seat[]
+    +getSnacks(): ISnack[]
+}
+
+interface SeatAllocationStrategy <<interface>> {
+    +allocateSeats(show: Show, seats: Seat[]): boolean
+    +releaseSeats(show: Show, seats: Seat[]): void
+}
+
+class CompositeSeatAllocationStrategy {
+    +allocateSeats(show: Show, seats: Seat[]): boolean
+    +releaseSeats(show: Show, seats: Seat[]): void
+}
+
+Show o--> "1" Screen : screen
+Booking o--> "*" Seat : seats
+Booking o--> "*" ISnack : snacks
+SeatAllocationStrategy <|.. CompositeSeatAllocationStrategy
+CompositeSeatAllocationStrategy ..> Screen : calls reserveSeats / releaseSeats
 @enduml
 ```
 
