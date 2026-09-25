@@ -1,5 +1,5 @@
 import { TicketType } from "../enums";
-import { TicketFactory } from "../interfaces";
+import { ISnack, TicketFactory } from "../interfaces";
 import { Booking, Money, Snack } from "../model";
 import { RegularBookingBuilder } from "./RegularBookingBuilder";
 
@@ -20,7 +20,7 @@ export class VIPBookingBuilder extends RegularBookingBuilder {
       }
 
       const hasVipSnack = this.snacks.some(
-        (snack) => snack.getName() === "VIP Welcome Combo",
+        (snack: ISnack) => snack.getName() === "VIP Welcome Combo",
       );
       if (!hasVipSnack) {
         const vipCombo = new Snack(

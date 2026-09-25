@@ -5,6 +5,8 @@ import { PaymentGatewayStrategy } from "./PaymentGateway";
 import { TicketFactory } from "./TicketFactory";
 import { BookingBuilder } from "./BookingBuilder";
 import { LoggingService } from "./LoggingService";
+import { ISnack } from "./ISnack";
+import { SeatComponent } from "./SeatComponent";
 
 export {
   PricingStrategy,
@@ -14,4 +16,6 @@ export {
   TicketFactory,
   BookingBuilder,
   LoggingService,
+  ISnack,
+  SeatComponent,
 };

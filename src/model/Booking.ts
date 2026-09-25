@@ -1,10 +1,10 @@
 import { BookingStatus } from "../enums";
+import { ISnack } from "../interfaces/ISnack";
 import { Ticket } from "../tickets/Ticket";
 import { Coupon } from "./Coupon";
 import { Money } from "./Money";
 import { Seat } from "./Seat";
 import { Show } from "./Show";
-import { Snack } from "./Snack";
 import { User } from "./User";
 
 export class Booking {
@@ -15,7 +15,7 @@ export class Booking {
   private status: BookingStatus;
   private amount: Money;
   private tickets: Ticket[];
-  private snacks: Snack[];
+  private snacks: ISnack[];
   private coupon: Coupon | null;
   private loyaltyPoints: number;
   private specialRequests: string[];
@@ -28,7 +28,7 @@ export class Booking {
     status: BookingStatus,
     amount: Money,
     tickets: Ticket[],
-    snacks: Snack[],
+    snacks: ISnack[],
     coupon: Coupon | null,
     loyaltyPoints: number,
     specialRequests: string[],
@@ -102,11 +102,11 @@ export class Booking {
     this.tickets = tickets;
   }
 
-  public getSnacks(): Snack[] {
+  public getSnacks(): ISnack[] {
     return this.snacks;
   }
 
-  public setSnacks(snacks: Snack[]): void {
+  public setSnacks(snacks: ISnack[]): void {
     this.snacks = snacks;
   }
 

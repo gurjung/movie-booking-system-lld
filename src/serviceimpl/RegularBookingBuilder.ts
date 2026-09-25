@@ -1,6 +1,6 @@
 import { BookingStatus, TicketType } from "../enums";
-import { BookingBuilder, TicketFactory } from "../interfaces";
-import { Booking, Coupon, Money, Seat, Show, Snack, User } from "../model";
+import { BookingBuilder, ISnack, TicketFactory } from "../interfaces";
+import { Booking, Coupon, Money, Seat, Show, User } from "../model";
 import { Ticket } from "../tickets";
 
 export class RegularBookingBuilder implements BookingBuilder {
@@ -8,7 +8,7 @@ export class RegularBookingBuilder implements BookingBuilder {
   protected show: Show | null;
   protected user: User | null;
   protected tickets: Ticket[];
-  protected snacks: Snack[];
+  protected snacks: ISnack[];
   protected coupon: Coupon | null;
   protected loyaltyPoints: number;
   protected specialRequests: string[];
@@ -40,7 +40,7 @@ export class RegularBookingBuilder implements BookingBuilder {
     return this;
   }
 
-  public addSnack(snack: Snack): BookingBuilder {
+  public addSnack(snack: ISnack): BookingBuilder {
     this.snacks.push(snack);
     return this;
   }
@@ -62,13 +62,19 @@ export class RegularBookingBuilder implements BookingBuilder {
 
   protected validate(): void {
     if (!this.show) {
-      throw new Error("Validation Error: Show must be set before building booking.");
+      throw new Error(
+        "Validation Error: Show must be set before building booking.",
+      );
     }
     if (!this.user) {
-      throw new Error("Validation Error: User must be set before building booking.");
+      throw new Error(
+        "Validation Error: User must be set before building booking.",
+      );
     }
     if (this.tickets.length === 0) {
-      throw new Error("Validation Error: At least one ticket must be added to the booking.");
+      throw new Error(
+        "Validation Error: At least one ticket must be added to the booking.",
+      );
     }
   }
 
@@ -84,7 +90,7 @@ export class RegularBookingBuilder implements BookingBuilder {
     status: BookingStatus,
     amount: Money,
     tickets: Ticket[],
-    snacks: Snack[],
+    snacks: ISnack[],
     coupon: Coupon | null,
     loyaltyPoints: number,
     specialRequests: string[],

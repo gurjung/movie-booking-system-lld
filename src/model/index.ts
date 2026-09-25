@@ -2,6 +2,7 @@ import { Movie } from "./Movie";
 import { Theater } from "./Theater";
 import { Money } from "./Money";
 import { Seat } from "./Seat";
+import { Row } from "./Row";
 import { Show } from "./Show";
 import { Screen } from "./Screen";
 import { Booking } from "./Booking";
@@ -18,6 +19,7 @@ export {
   Theater,
   Money,
   Seat,
+  Row,
   Show,
   Screen,
   Booking,

@@ -62,10 +62,7 @@ export class BookingService {
     return new Money(total);
   }
 
-  public book(
-    booking: Booking,
-    paymentDetails: PaymentDetails,
-  ): BookingResult {
+  public book(booking: Booking, paymentDetails: PaymentDetails): BookingResult {
     const user = booking.getUser();
     const show = booking.getShow();
     const seats = booking.getSeats();
