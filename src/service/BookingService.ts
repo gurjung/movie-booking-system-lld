@@ -1,11 +1,12 @@
 import { BookingStatus } from "../enums";
 import {
+  LoggingService,
   NotificationService,
+  PaymentGatewayStrategy,
   PricingStrategy,
   SeatAllocationStrategy,
 } from "../interfaces";
-import { PaymentGatewayStrategy } from "../interfaces/PaymentGateway";
-import { Booking, Money, PaymentDetails, Seat, Show, User } from "../model";
+import { Booking, Money, PaymentDetails } from "../model";
 import { BookingResult } from "../model/BookingResult";
 import { BookingRepository } from "../repository/BookingRepository";
 
@@ -15,6 +16,7 @@ export class BookingService {
   private payment: PaymentGatewayStrategy;
   private repo: BookingRepository;
   private notifier: NotificationService;
+  private logger: LoggingService;
 
   constructor(
     pricing: PricingStrategy,
@@ -22,58 +24,83 @@ export class BookingService {
     payment: PaymentGatewayStrategy,
     repo: BookingRepository,
     notifier: NotificationService,
+    logger: LoggingService,
   ) {
     this.seatAllocator = seatAllocator;
     this.pricing = pricing;
     this.payment = payment;
     this.repo = repo;
     this.notifier = notifier;
+    this.logger = logger;
+  }
+
+  private calculateTotal(booking: Booking): Money {
+    const show = booking.getShow();
+    const user = booking.getUser();
+    let total = 0;
+
+    for (const ticket of booking.getTickets()) {
+      const base = ticket.getBasePrice().getAmount();
+      const adjustment = this.pricing
+        .calculatePrice(show, ticket.getSeat(), user)
+        .getAmount();
+      total += base + adjustment;
+    }
+
+    for (const snack of booking.getSnacks()) {
+      if (!snack.isComplimentary()) {
+        total += snack.getPrice().getAmount();
+      }
+    }
+
+    const coupon = booking.getCoupon();
+    if (coupon) {
+      total -= coupon.getDiscountAmount().getAmount();
+    }
+
+    total = Math.max(0, total);
+    return new Money(total);
   }
 
   public book(
-    user: User,
-    show: Show,
-    seats: Seat[],
+    booking: Booking,
     paymentDetails: PaymentDetails,
   ): BookingResult {
-    // calculate total price of seats
-    let total = Money.zero();
+    const user = booking.getUser();
+    const show = booking.getShow();
+    const seats = booking.getSeats();
 
-    for (let seat of seats) {
-      let seatPrice = this.pricing.calculatePrice(show, seat, user);
-      total = total.add(seatPrice);
-    }
+    this.logger.info(
+      `Booking started for user: ${user.getName()} (ID: ${user.getId()}) for show: ${show.getId()}`,
+    );
 
-    // seat allocation
+    const total = this.calculateTotal(booking);
+    booking.setAmount(total);
+
     const reserved = this.seatAllocator.allocateSeats(show, seats);
     if (!reserved) {
+      booking.setStatus(BookingStatus.FAILED);
+      this.logger.warn(`Seats unavailable for show: ${show.getId()}`);
       return BookingResult.fail("Seats unavailable");
     }
 
-    //payment processing
     const paymentResult = this.payment.charge(user, total, paymentDetails);
     if (!paymentResult.isSuccess()) {
-      // release the hold seats
       this.seatAllocator.releaseSeats(show, seats);
+      booking.setStatus(BookingStatus.FAILED);
       const reason = paymentResult.getFailureReason() ?? "Payment failed";
-
+      this.logger.error(
+        `Payment failed for user: ${user.getId()}. Reason: ${reason}`,
+      );
       return BookingResult.fail(reason);
     }
 
-    // do booking and save in db
-    const bookingId = "BKG" + Date.now();
-    const booking = new Booking(
-      bookingId,
-      show,
-      user,
-      seats,
-      BookingStatus.CONFIRMED,
-      total,
+    booking.setStatus(BookingStatus.CONFIRMED);
+    this.repo.save(booking);
+    this.logger.info(
+      `Booking confirmed successfully! Booking ID: ${booking.getId()}`,
     );
 
-    this.repo.save(booking);
-
-    // notify users
     this.notifier.notify(user, booking);
 
     return BookingResult.success(booking);

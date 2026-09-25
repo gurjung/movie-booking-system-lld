@@ -21,7 +21,7 @@ export class Movie {
     this.language = language;
     this.rating = rating;
   }
-  //   getter and setter
+
   public getId(): string {
     return this.id;
   }

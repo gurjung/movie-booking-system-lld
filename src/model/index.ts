@@ -10,6 +10,8 @@ import { User } from "./User";
 import { PaymentDetails } from "./PaymentDetails";
 import { PaymentResult } from "./PaymentResult";
 import { BookingResult } from "./BookingResult";
+import { Snack } from "./Snack";
+import { Coupon } from "./Coupon";
 
 export {
   Movie,
@@ -24,4 +26,6 @@ export {
   PaymentDetails,
   PaymentResult,
   BookingResult,
+  Snack,
+  Coupon,
 };

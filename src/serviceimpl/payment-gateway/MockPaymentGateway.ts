@@ -7,7 +7,6 @@ export class MockPaymentGateway implements PaymentGatewayStrategy {
     amount: Money,
     details: PaymentDetails,
   ): PaymentResult {
-    // Simulated success.
     const transactionId: string = "TXN-" + Date.now();
     return new PaymentResult(true, transactionId, null);
   }

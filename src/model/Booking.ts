@@ -1,7 +1,10 @@
 import { BookingStatus } from "../enums";
+import { Ticket } from "../tickets/Ticket";
+import { Coupon } from "./Coupon";
 import { Money } from "./Money";
 import { Seat } from "./Seat";
 import { Show } from "./Show";
+import { Snack } from "./Snack";
 import { User } from "./User";
 
 export class Booking {
@@ -11,6 +14,11 @@ export class Booking {
   private seats: Seat[];
   private status: BookingStatus;
   private amount: Money;
+  private tickets: Ticket[];
+  private snacks: Snack[];
+  private coupon: Coupon | null;
+  private loyaltyPoints: number;
+  private specialRequests: string[];
 
   constructor(
     id: string,
@@ -19,6 +27,11 @@ export class Booking {
     seats: Seat[],
     status: BookingStatus,
     amount: Money,
+    tickets: Ticket[],
+    snacks: Snack[],
+    coupon: Coupon | null,
+    loyaltyPoints: number,
+    specialRequests: string[],
   ) {
     this.id = id;
     this.show = show;
@@ -26,6 +39,11 @@ export class Booking {
     this.seats = seats;
     this.status = status;
     this.amount = amount;
+    this.tickets = tickets;
+    this.snacks = snacks;
+    this.coupon = coupon;
+    this.loyaltyPoints = loyaltyPoints;
+    this.specialRequests = specialRequests;
   }
 
   public getId(): string {
@@ -74,5 +92,45 @@ export class Booking {
 
   public setAmount(amount: Money): void {
     this.amount = amount;
+  }
+
+  public getTickets(): Ticket[] {
+    return this.tickets;
+  }
+
+  public setTickets(tickets: Ticket[]): void {
+    this.tickets = tickets;
+  }
+
+  public getSnacks(): Snack[] {
+    return this.snacks;
+  }
+
+  public setSnacks(snacks: Snack[]): void {
+    this.snacks = snacks;
+  }
+
+  public getCoupon(): Coupon | null {
+    return this.coupon;
+  }
+
+  public setCoupon(coupon: Coupon | null): void {
+    this.coupon = coupon;
+  }
+
+  public getLoyaltyPoints(): number {
+    return this.loyaltyPoints;
+  }
+
+  public setLoyaltyPoints(loyaltyPoints: number): void {
+    this.loyaltyPoints = loyaltyPoints;
+  }
+
+  public getSpecialRequests(): string[] {
+    return this.specialRequests;
+  }
+
+  public setSpecialRequests(specialRequests: string[]): void {
+    this.specialRequests = specialRequests;
   }
 }

@@ -13,27 +13,24 @@ export class InMemorySeatAllocationStrategy implements SeatAllocationStrategy {
   }
 
   public allocateSeats(show: Show, seats: Seat[]): boolean {
-    // check phase
     for (const seat of seats) {
       const key = this.buildKey(show.getId(), seat.getId());
-
       if (this.bookedSeats.has(key)) {
-        return false; // someone already holds this seat for this show
+        return false;
       }
     }
-    // set phase
+
     for (const seat of seats) {
       const key = this.buildKey(show.getId(), seat.getId());
-
       this.bookedSeats.add(key);
     }
+
     return true;
   }
 
   public releaseSeats(show: Show, seats: Seat[]): void {
     for (const seat of seats) {
       const key = this.buildKey(show.getId(), seat.getId());
-
       this.bookedSeats.delete(key);
     }
   }
