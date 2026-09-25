@@ -1,6 +1,6 @@
 # Movie Booking System (Low-Level Design)
 
-A highly structured, clean-architecture Low-Level Design (LLD) implementation of a Movie Booking System in TypeScript. This project demonstrates object-oriented design principles (SOLID), dependency injection, and several behavioral/creational design patterns.
+A highly structured, clean-architecture Low-Level Design (LLD) implementation of a Movie Booking System in TypeScript. This project demonstrates object-oriented design principles (SOLID), dependency injection, and several behavioral and creational design patterns.
 
 ---
 
@@ -9,13 +9,23 @@ A highly structured, clean-architecture Low-Level Design (LLD) implementation of
 The project follows clean architectural boundaries by separating data structures, interfaces, and concrete business logic.
 
 ### Design Patterns Used
+
+#### Creational Patterns
+1. **Simple Factory Pattern**: 
+   - **Ticket Factory** (`TicketFactory`, `SimpleTicketFactory`): Encapsulates polymorphic creation of `Ticket` subclasses (`StandardTicket`, `PremiumTicket`, `IMAXTicket`, `ReclinerTicket`) based on `TicketType` and seat validation.
+2. **Builder Pattern**: 
+   - **Booking Builders** (`BookingBuilder`, `RegularBookingBuilder`, `VIPBookingBuilder`): Separates the step-by-step construction of complex `Booking` objects from their representation. Supports fluent addition of tickets, snacks, coupons, loyalty points, and special requests, with validation before instantiating immutable bookings. `VIPBookingBuilder` enforces VIP-specific invariants (disallowing standard tickets, auto-injecting complimentary welcome snacks).
+3. **Singleton Pattern**: 
+   - **Logger** (`Logger` implementing `LoggingService`): A lazily initialized, shared logging instance accessed via `Logger.getInstance()` and injected into `BookingService` via constructor injection to maintain testability.
+
+#### Behavioral & Structural Patterns
 1. **Strategy Pattern**: 
-   - **Pricing**: Dynamic calculation using pricing strategies (e.g., peak-hour pricing vs. normal pricing).
-   - **Seat Allocation**: Pluggable allocation mechanisms (e.g., in-memory seat locker).
-   - **Payment Gateway**: Decoupled interface to easily swap between gateways.
-   - **Notification Service**: Flexible implementation of notifying the user (e.g., email notification).
-2. **Repository Pattern**: Abstracted persistence using an in-memory data store for `Booking` objects.
-3. **Dependency Injection**: Dependencies are passed into the orchestrator `BookingService` constructor to ensure high testability and inversion of control.
+   - **Pricing**: Dynamic calculation using pricing strategies (`DefaultPricingStrategy`, `PeakHourPricingStrategy`, `VIPPricingStrategy`).
+   - **Seat Allocation**: Pluggable allocation mechanisms (`InMemorySeatAllocationStrategy`).
+   - **Payment Gateway**: Decoupled interface to easily swap between gateways (`MockPaymentGateway`).
+   - **Notification Service**: Flexible notification delivery (`EmailNotificationService`).
+2. **Repository Pattern**: Abstracted persistence using an in-memory data store for `Booking` objects (`BookingRepository`).
+3. **Dependency Injection**: Dependencies (`PricingStrategy`, `SeatAllocationStrategy`, `PaymentGatewayStrategy`, `BookingRepository`, `NotificationService`, `LoggingService`) are injected into the orchestrator `BookingService` constructor for inversion of control and decoupled testability.
 
 ---
 
@@ -23,13 +33,18 @@ The project follows clean architectural boundaries by separating data structures
 
 ```text
 src/
-├── enums/            # Domain-specific enumerations (SeatType, BookingStatus, etc.)
-├── interfaces/       # Strategy definitions and pluggable interfaces
-├── model/            # Core domain entities (User, Movie, Seat, Show, Booking, etc.)
+├── enums/            # Domain-specific enumerations (SeatType, TicketType, BookingStatus, SeatStatus)
+├── interfaces/       # Strategy definitions, factory, builder, and logging interfaces
+├── model/            # Core domain entities (User, Movie, Seat, Show, Booking, Snack, Coupon, etc.)
 ├── repository/       # Data access and storage layers (BookingRepository)
 ├── service/          # Core orchestrator business logic (BookingService)
-├── serviceimpl/      # Concrete implementations of strategies (pricing, payment, etc.)
-└── main.ts           # Orchestrator runner and entry point
+├── serviceimpl/      # Concrete implementations (strategies, ticket factory, booking builders, logger)
+│   ├── notification/ # Notification implementations (EmailNotification)
+│   ├── payment-gateway/ # Payment gateway implementations (MockPaymentGateway)
+│   ├── pricing/      # Pricing strategies (DefaultPricing, PeakHourPricing, VIPPricingStrategy)
+│   └── seatAllocation/ # Seat allocation strategies (InMemorySeatAllocation)
+├── tickets/          # Polymorphic ticket hierarchy (Ticket, StandardTicket, PremiumTicket, etc.)
+└── main.ts           # Composition root, dependency wiring, and demo scenarios
 ```
 
 ---
@@ -46,7 +61,7 @@ npm install
 ```
 
 ### Run the Application
-To run the main execution workflow (simulates a user booking seats and receiving an email receipt):
+To run the main execution workflow (demonstrates Regular Booking, VIP Booking with auto-complimentary snacks, and VIP validation error handling):
 ```bash
 npm start
 ```
@@ -73,6 +88,13 @@ enum SeatType {
 enum SeatStatus {
   AVAILABLE
   BOOKED
+}
+
+enum TicketType {
+  STANDARD
+  PREMIUM
+  IMAX
+  RECLINER
 }
 
 enum BookingStatus {
@@ -208,6 +230,74 @@ class Show {
   + setEndTime(end: Date): void
 }
 
+class Snack {
+  - id: string
+  - name: string
+  - price: Money
+  - complimentary: boolean
+  + constructor(id: string, name: string, price: Money, complimentary: boolean)
+  + getId(): string
+  + setId(id: string): void
+  + getName(): string
+  + setName(name: string): void
+  + getPrice(): Money
+  + setPrice(price: Money): void
+  + isComplimentary(): boolean
+  + setComplimentary(complimentary: boolean): void
+}
+
+class Coupon {
+  - code: string
+  - discountAmount: Money
+  + constructor(code: string, discountAmount: Money)
+  + getCode(): string
+  + setCode(code: string): void
+  + getDiscountAmount(): Money
+  + setDiscountAmount(discountAmount: Money): void
+}
+
+abstract class Ticket {
+  - seat: Seat
+  + constructor(seat: Seat)
+  + getSeat(): Seat
+  + {abstract} getType(): TicketType
+  + {abstract} getBasePrice(): Money
+  + {abstract} getAmenities(): string[]
+  + {abstract} getAllowedSeatTypes(): SeatType[]
+}
+
+class StandardTicket extends Ticket {
+  + constructor(seat: Seat)
+  + getType(): TicketType
+  + getBasePrice(): Money
+  + getAmenities(): string[]
+  + getAllowedSeatTypes(): SeatType[]
+}
+
+class PremiumTicket extends Ticket {
+  + constructor(seat: Seat)
+  + getType(): TicketType
+  + getBasePrice(): Money
+  + getAmenities(): string[]
+  + getAllowedSeatTypes(): SeatType[]
+}
+
+class IMAXTicket extends Ticket {
+  + constructor(seat: Seat)
+  + getType(): TicketType
+  + getBasePrice(): Money
+  + getAmenities(): string[]
+  + getAllowedSeatTypes(): SeatType[]
+}
+
+class ReclinerTicket extends Ticket {
+  + constructor(seat: Seat)
+  + getType(): TicketType
+  + getBasePrice(): Money
+  + getAmenities(): string[]
+  + getAllowedSeatTypes(): SeatType[]
+}
+
 class PaymentDetails {
   - method: PaymentMethod
   + constructor(method: PaymentMethod)
@@ -234,7 +324,12 @@ class Booking {
   - seats: Seat[]
   - status: BookingStatus
   - amount: Money
-  + constructor(id: string, show: Show, user: User, seats: Seat[], status: BookingStatus, amount: Money)
+  - tickets: Ticket[]
+  - snacks: Snack[]
+  - coupon: Coupon | null
+  - loyaltyPoints: number
+  - specialRequests: string[]
+  + constructor(id: string, show: Show, user: User, seats: Seat[], status: BookingStatus, amount: Money, tickets: Ticket[], snacks: Snack[], coupon: Coupon | null, loyaltyPoints: number, specialRequests: string[])
   + getId(): string
   + setId(id: string): void
   + getShow(): Show
@@ -247,6 +342,16 @@ class Booking {
   + setStatus(status: BookingStatus): void
   + getAmount(): Money
   + setAmount(amount: Money): void
+  + getTickets(): Ticket[]
+  + setTickets(tickets: Ticket[]): void
+  + getSnacks(): Snack[]
+  + setSnacks(snacks: Snack[]): void
+  + getCoupon(): Coupon | null
+  + setCoupon(coupon: Coupon | null): void
+  + getLoyaltyPoints(): number
+  + setLoyaltyPoints(loyaltyPoints: number): void
+  + getSpecialRequests(): string[]
+  + setSpecialRequests(specialRequests: string[]): void
 }
 
 class BookingResult {
@@ -259,6 +364,53 @@ class BookingResult {
   + getErrorMessage(): string | null
   + {static} success(booking: Booking): BookingResult
   + {static} fail(errorMessage: string): BookingResult
+}
+
+interface TicketFactory {
+  + createTicket(type: TicketType, seat: Seat): Ticket
+}
+
+class SimpleTicketFactory implements TicketFactory {
+  + createTicket(type: TicketType, seat: Seat): Ticket
+}
+
+interface BookingBuilder {
+  + forShow(show: Show): BookingBuilder
+  + forUser(user: User): BookingBuilder
+  + addTicket(seat: Seat, ticketType: TicketType): BookingBuilder
+  + addSnack(snack: Snack): BookingBuilder
+  + applyCoupon(coupon: Coupon): BookingBuilder
+  + withLoyaltyPoints(points: number): BookingBuilder
+  + withSpecialRequest(text: string): BookingBuilder
+  + build(): Booking
+}
+
+class RegularBookingBuilder implements BookingBuilder {
+  # ticketFactory: TicketFactory
+  # show: Show | null
+  # user: User | null
+  # tickets: Ticket[]
+  # snacks: Snack[]
+  # coupon: Coupon | null
+  # loyaltyPoints: number
+  # specialRequests: string[]
+  + constructor(ticketFactory: TicketFactory)
+  + forShow(show: Show): BookingBuilder
+  + forUser(user: User): BookingBuilder
+  + addTicket(seat: Seat, ticketType: TicketType): BookingBuilder
+  + addSnack(snack: Snack): BookingBuilder
+  + applyCoupon(coupon: Coupon): BookingBuilder
+  + withLoyaltyPoints(points: number): BookingBuilder
+  + withSpecialRequest(text: string): BookingBuilder
+  # validate(): void
+  # generateBookingId(): string
+  # reset(): void
+  + build(): Booking
+}
+
+class VIPBookingBuilder extends RegularBookingBuilder {
+  + constructor(ticketFactory: TicketFactory)
+  + build(): Booking
 }
 
 interface PricingStrategy {
@@ -278,11 +430,32 @@ interface NotificationService {
   + notify(user: User, booking: Booking): void
 }
 
+interface LoggingService {
+  + info(msg: string): void
+  + warn(msg: string): void
+  + error(msg: string): void
+}
+
+class Logger implements LoggingService {
+  - {static} instance: Logger | null
+  - constructor()
+  + {static} getInstance(): Logger
+  + info(msg: string): void
+  + warn(msg: string): void
+  + error(msg: string): void
+}
+
 class DefaultPricingStrategy implements PricingStrategy {
   + calculatePrice(show: Show, seat: Seat, user: User): Money
 }
 
 class PeakHourPricingStrategy implements PricingStrategy {
+  - {static} readonly PEAK_SURCHARGE: number
+  + calculatePrice(show: Show, seat: Seat, user: User): Money
+}
+
+class VIPPricingStrategy implements PricingStrategy {
+  - {static} readonly VIP_SURCHARGE: number
   + calculatePrice(show: Show, seat: Seat, user: User): Money
 }
 
@@ -312,8 +485,10 @@ class BookingService {
   - payment: PaymentGatewayStrategy
   - repo: BookingRepository
   - notifier: NotificationService
-  + constructor(pricing: PricingStrategy, seatAllocator: SeatAllocationStrategy, payment: PaymentGatewayStrategy, repo: BookingRepository, notifier: NotificationService)
-  + book(user: User, show: Show, seats: Seat[], paymentDetails: PaymentDetails): BookingResult
+  - logger: LoggingService
+  + constructor(pricing: PricingStrategy, seatAllocator: SeatAllocationStrategy, payment: PaymentGatewayStrategy, repo: BookingRepository, notifier: NotificationService, logger: LoggingService)
+  - calculateTotal(booking: Booking): Money
+  + book(booking: Booking, paymentDetails: PaymentDetails): BookingResult
 }
 
 User "1" *--> "1" Address
@@ -323,19 +498,49 @@ Screen "1" *--> "*" Seat
 Seat "1" *--> "1" SeatType
 Show "1" *--> "1" Movie
 Show "1" *--> "1" Screen
+
+Ticket "1" *--> "1" Seat
+Ticket "1" *--> "1" TicketType
+Ticket <|-- StandardTicket
+Ticket <|-- PremiumTicket
+Ticket <|-- IMAXTicket
+Ticket <|-- ReclinerTicket
+
 Booking "1" *--> "1" Show
 Booking "1" *--> "1" User
 Booking "1" *--> "*" Seat
+Booking "1" *--> "*" Ticket
+Booking "1" *--> "*" Snack
+Booking "1" o--> "0..1" Coupon
 Booking "1" *--> "1" BookingStatus
 Booking "1" *--> "1" Money
 BookingResult "1" *--> "0..1" Booking
+
+TicketFactory <|.. SimpleTicketFactory
+SimpleTicketFactory ..> Ticket : creates
+
+BookingBuilder <|.. RegularBookingBuilder
+RegularBookingBuilder <|-- VIPBookingBuilder
+RegularBookingBuilder "1" o--> "1" TicketFactory
+RegularBookingBuilder ..> Booking : builds
+
+PricingStrategy <|.. DefaultPricingStrategy
+PricingStrategy <|.. PeakHourPricingStrategy
+PricingStrategy <|.. VIPPricingStrategy
+
+SeatAllocationStrategy <|.. InMemorySeatAllocationStrategy
+PaymentGatewayStrategy <|.. MockPaymentGateway
+NotificationService <|.. EmailNotificationService
+LoggingService <|.. Logger
+
 BookingService "1" o--> "1" SeatAllocationStrategy
 BookingService "1" o--> "1" PricingStrategy
 BookingService "1" o--> "1" PaymentGatewayStrategy
 BookingService "1" o--> "1" BookingRepository
 BookingService "1" o--> "1" NotificationService
+BookingService "1" o--> "1" LoggingService
 
-@endum
+@enduml
 ```
 
 ### Sequence Diagram
@@ -345,22 +550,46 @@ BookingService "1" o--> "1" NotificationService
 autonumber
 actor Client
 
+participant "builder: BookingBuilder" as Builder
+participant "factory: TicketFactory" as Factory
 participant "bookingService: BookingService" as BS
+participant "logger: LoggingService" as Logger
 participant "pricing: PricingStrategy" as PS
 participant "seatAllocator: SeatAllocationStrategy" as SAS
 participant "payment: PaymentGatewayStrategy" as PGS
 participant "repo: BookingRepository" as Repo
 participant "notifier: NotificationService" as NS
 
-Client -> BS: book(user, show, seats, paymentDetails)
+Client -> Builder: addTicket(seat, ticketType)
+activate Builder
+Builder -> Factory: createTicket(ticketType, seat)
+activate Factory
+Factory --> Builder: ticket: Ticket
+deactivate Factory
+Builder --> Client: builder
+deactivate Builder
+
+Client -> Builder: build()
+activate Builder
+note over Builder: Validate configuration & construct Booking instance
+Builder --> Client: booking: Booking
+deactivate Builder
+
+Client -> BS: book(booking, paymentDetails)
 activate BS
 
-loop for each seat in seats
+BS -> Logger: info("Booking started...")
+activate Logger
+Logger --> BS: void
+deactivate Logger
+
+note over BS: calculateTotal(booking)\nSum tickets (base + pricing adjustment),\nadd non-complimentary snacks, subtract coupon
+
+loop for each ticket in booking.tickets
   BS -> PS: calculatePrice(show, seat, user)
   activate PS
-  PS --> BS: seatPrice: Money
+  PS --> BS: priceAdjustment: Money
   deactivate PS
-  note over BS: Accumulate total price
 end
 
 BS -> SAS: allocateSeats(show, seats)
@@ -369,6 +598,7 @@ SAS --> BS: reserved: boolean
 deactivate SAS
 
 alt reserved == false
+  BS -> Logger: warn("Seats unavailable...")
   BS --> Client: BookingResult.fail("Seats unavailable")
 end
 
@@ -382,15 +612,21 @@ alt paymentResult.isSuccess() == false
   activate SAS
   SAS --> BS: void
   deactivate SAS
+  BS -> Logger: error("Payment failed...")
   BS --> Client: BookingResult.fail(reason)
 end
 
-note over BS: Create Booking with status CONFIRMED and total Money
+note over BS: Update booking status to CONFIRMED
 
 BS -> Repo: save(booking)
 activate Repo
 Repo --> BS: booking
 deactivate Repo
+
+BS -> Logger: info("Booking confirmed...")
+activate Logger
+Logger --> BS: void
+deactivate Logger
 
 BS -> NS: notify(user, booking)
 activate NS
@@ -399,5 +635,5 @@ deactivate NS
 
 BS --> Client: BookingResult.success(booking)
 deactivate BS
-@endum
+@enduml
 ```
