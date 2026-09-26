@@ -28,13 +28,23 @@ The project follows clean architectural boundaries by separating data structures
 
 #### Behavioral Patterns
 
-1. **Strategy Pattern**:
-   - **Pricing**: Dynamic calculation using pricing strategies (`DefaultPricingStrategy`, `PeakHourPricingStrategy`, `VIPPricingStrategy`).
-   - **Seat Allocation**: Pluggable allocation mechanisms (`InMemorySeatAllocationStrategy`, `CompositeSeatAllocationStrategy`).
-   - **Payment Gateway**: Decoupled interface to easily swap between gateways (`MockPaymentGateway`).
-   - **Notification Service**: Flexible notification delivery (`EmailNotificationService`).
-2. **Repository Pattern**: Abstracted persistence using an in-memory data store for `Booking` objects (`BookingRepository`).
-3. **Dependency Injection**: Dependencies (`PricingStrategy`, `SeatAllocationStrategy`, `PaymentGatewayStrategy`, `BookingRepository`, `NotificationService`, `LoggingService`) are injected into the orchestrator `BookingService` constructor for inversion of control and decoupled testability.
+1. **Strategy Pattern (Dynamic Pricing)**:
+   - Dynamic surcharge and discount calculation decoupled from `BookingService`.
+   - Strategies implemented: `WeekdayPricingStrategy` (weekday concession), `WeekendSurgePricingStrategy` (weekend demand surge), `FestivalDiscountPricingStrategy` (promotional festival discounts), `DefaultPricingStrategy`, `PeakHourPricingStrategy`, and `VIPPricingStrategy`.
+   - Strategies are injected into `BookingService` at runtime via Dependency Injection.
+2. **Observer Pattern (Real-Time Multi-Channel Notifications)**:
+   - Event-driven subscriber model decoupling notification delivery from core booking transactions.
+   - Core contracts: `Subject` and `Observer`.
+   - Event hierarchy: `BookingEvent` base class with concrete events (`BookingConfirmedEvent`, `ShowReminderEvent`, `OfferBroadcastEvent`).
+   - Concrete notifiers: `EmailNotifier`, `SMSNotifier`, and `PushNotifier`.
+   - Thread/iteration safety: uses snapshot array copies during event dispatch.
+   - `ObservableNotificationService` bridges `NotificationService` and `BookingSubject` for seamless integration into `BookingService`.
+3. **Command Pattern (Transactional Booking Actions & LIFO Rollback)**:
+   - Encapsulates booking operations into discrete, reversible command objects implementing `execute(): boolean` and `undo(): void`.
+   - Concrete commands: `SelectSeatCommand`, `ReserveSeatCommand`, `ConfirmPaymentCommand`, and `SendConfirmationCommand`.
+   - `BookingInvoker` executes command pipelines and maintains a history stack. Upon any downstream failure (e.g., payment declined), it performs an automatic LIFO rollback, undoing prior commands and restoring reserved seats to available status.
+4. **Repository Pattern**: Abstracted persistence using an in-memory data store for `Booking` objects (`BookingRepository`).
+5. **Dependency Injection**: Dependencies (`PricingStrategy`, `SeatAllocationStrategy`, `PaymentGatewayStrategy`, `BookingRepository`, `NotificationService`, `LoggingService`) are injected into the orchestrator `BookingService` constructor for inversion of control and decoupled testability.
 
 ---
 
@@ -42,19 +52,23 @@ The project follows clean architectural boundaries by separating data structures
 
 ```text
 src/
+├── command/          # Command pattern (Command, SelectSeat, ReserveSeat, ConfirmPayment, SendConfirmation, BookingInvoker)
 ├── enums/            # Domain-specific enumerations (SeatType, TicketType, BookingStatus, SeatStatus)
-├── interfaces/       # Strategy definitions, factory, builder, snack, and seat component interfaces
-├── model/            # Core domain entities (User, Movie, Seat, Row, Show, Screen, Booking, Snack, Coupon, etc.)
+├── interfaces/       # Core domain contracts, strategy definitions, builders, and factories
+├── model/            # Core domain entities (User, Movie, Seat, Row, Show, Screen, Booking, Snack, Coupon, Money, etc.)
+├── observer/         # Observer pattern (Subject, Observer, BookingSubject, events, notifiers)
+│   ├── events/       # Event hierarchy (BookingEvent, BookingConfirmedEvent, ShowReminderEvent, OfferBroadcastEvent)
+│   └── notifiers/    # Concrete observers (EmailNotifier, SMSNotifier, PushNotifier)
 ├── repository/       # Data access and storage layers (BookingRepository)
-├── service/          # Core orchestrator business logic (BookingService)
-├── serviceimpl/      # Concrete implementations (strategies, ticket factory, booking builders, logger)
-│   ├── notification/ # Notification implementations (EmailNotification)
-│   ├── payment-gateway/ # Payment gateway implementations (MockPaymentGateway)
-│   ├── pricing/      # Pricing strategies (DefaultPricing, PeakHourPricing, VIPPricingStrategy)
+├── service/          # Core orchestrator business logic (BookingService, book, bookWithCommands)
+├── serviceimpl/      # Concrete implementations
+│   ├── notification/ # Notification services (EmailNotification, ObservableNotificationService)
+│   ├── payment-gateway/ # Payment gateways (MockPaymentGateway with failure simulation)
+│   ├── pricing/      # Dynamic pricing strategies (Weekday, WeekendSurge, FestivalDiscount, PeakHour, VIP)
 │   └── seatAllocation/ # Seat allocation strategies (InMemorySeatAllocation, CompositeSeatAllocation)
-├── snacks/           # Snack components and decorators (Popcorn, Soda, Nachos, ExtraButter, etc.)
-├── tickets/          # Polymorphic ticket hierarchy (Ticket, StandardTicket, PremiumTicket, etc.)
-└── main.ts           # Composition root, dependency wiring, and demo scenarios
+├── snacks/           # Snack components and decorators (Popcorn, Soda, Nachos, LargeSize, ExtraButter, ComboWrap, GlutenFree)
+├── tickets/          # Polymorphic ticket hierarchy (Ticket, StandardTicket, PremiumTicket, IMAXTicket, ReclinerTicket)
+└── main.ts           # Composition root, dependency wiring, and 11 demo scenarios
 ```
 
 ---
@@ -75,7 +89,7 @@ npm install
 
 ### Run the Application
 
-To run the main execution workflow (demonstrating all 6 demo scenarios: Regular Booking, VIP Booking with auto-complimentary snacks, VIP validation error handling, Decorator snack composition, Composite theater layout reservation, and integrated end-to-end booking):
+To run the main execution workflow (demonstrating all 11 demo scenarios across creational, structural, and behavioral patterns: Regular Booking, VIP Booking with auto-complimentary snacks, VIP validation error handling, Decorator snack composition, Composite theater layout reservation, integrated booking, Strategy dynamic pricing, Observer multi-channel notifications and dynamic unsubscription, Command transactional execution, Command automatic rollback on payment failure, and BookingService command integration):
 
 ```bash
 npm start
@@ -791,97 +805,311 @@ CompositeSeatAllocationStrategy ..> Screen : calls reserveSeats / releaseSeats
 @enduml
 ```
 
-### Sequence Diagram
+### Strategy Pattern Class Diagram (Dynamic Pricing)
 
 ```plantuml
 @startuml
-autonumber
-actor Client
+skinparam classAttributeIconSize 0
+skinparam roundcorner 8
+skinparam shadowing false
+skinparam monochrome true
 
-participant "builder: BookingBuilder" as Builder
-participant "factory: TicketFactory" as Factory
-participant "bookingService: BookingService" as BS
-participant "logger: LoggingService" as Logger
-participant "pricing: PricingStrategy" as PS
-participant "seatAllocator: SeatAllocationStrategy" as SAS
-participant "payment: PaymentGatewayStrategy" as PGS
-participant "repo: BookingRepository" as Repo
-participant "notifier: NotificationService" as NS
+interface PricingStrategy <<interface>> {
+    +calculatePrice(show: Show, seat: Seat, user: User): Money
+}
 
-Client -> Builder: addTicket(seat, ticketType)
-activate Builder
-Builder -> Factory: createTicket(ticketType, seat)
-activate Factory
-Factory --> Builder: ticket: Ticket
-deactivate Factory
-Builder --> Client: builder
-deactivate Builder
+class WeekdayPricingStrategy {
+    -discountAmount: number
+    +WeekdayPricingStrategy(discountAmount?: number)
+    +calculatePrice(show: Show, seat: Seat, user: User): Money
+}
 
-Client -> Builder: build()
-activate Builder
-note over Builder: Validate configuration & construct Booking instance
-Builder --> Client: booking: Booking
-deactivate Builder
+class WeekendSurgePricingStrategy {
+    -surgeAmount: number
+    +WeekendSurgePricingStrategy(surgeAmount?: number)
+    +calculatePrice(show: Show, seat: Seat, user: User): Money
+}
 
-Client -> BS: book(booking, paymentDetails)
-activate BS
+class FestivalDiscountPricingStrategy {
+    -discountAmount: number
+    +FestivalDiscountPricingStrategy(discountAmount?: number)
+    +calculatePrice(show: Show, seat: Seat, user: User): Money
+}
 
-BS -> Logger: info("Booking started...")
-activate Logger
-Logger --> BS: void
-deactivate Logger
+class DefaultPricingStrategy {
+    +calculatePrice(show: Show, seat: Seat, user: User): Money
+}
 
-note over BS: calculateTotal(booking)\nSum tickets (base + pricing adjustment),\nadd non-complimentary snacks, subtract coupon
+class PeakHourPricingStrategy {
+    -{static} PEAK_SURCHARGE: number
+    +calculatePrice(show: Show, seat: Seat, user: User): Money
+}
 
-loop for each ticket in booking.tickets
-  BS -> PS: calculatePrice(show, seat, user)
-  activate PS
-  PS --> BS: priceAdjustment: Money
-  deactivate PS
-end
+class VIPPricingStrategy {
+    -{static} VIP_SURCHARGE: number
+    +calculatePrice(show: Show, seat: Seat, user: User): Money
+}
 
-BS -> SAS: allocateSeats(show, seats)
-activate SAS
-SAS --> BS: reserved: boolean
-deactivate SAS
+class BookingService {
+    -pricing: PricingStrategy
+    +constructor(pricing: PricingStrategy, ...)
+    +book(booking: Booking, details: PaymentDetails): BookingResult
+}
 
-alt reserved == false
-  BS -> Logger: warn("Seats unavailable...")
-  BS --> Client: BookingResult.fail("Seats unavailable")
-end
+PricingStrategy <|.. WeekdayPricingStrategy
+PricingStrategy <|.. WeekendSurgePricingStrategy
+PricingStrategy <|.. FestivalDiscountPricingStrategy
+PricingStrategy <|.. DefaultPricingStrategy
+PricingStrategy <|.. PeakHourPricingStrategy
+PricingStrategy <|.. VIPPricingStrategy
 
-BS -> PGS: charge(user, total, paymentDetails)
-activate PGS
-PGS --> BS: paymentResult: PaymentResult
-deactivate PGS
-
-alt paymentResult.isSuccess() == false
-  BS -> SAS: releaseSeats(show, seats)
-  activate SAS
-  SAS --> BS: void
-  deactivate SAS
-  BS -> Logger: error("Payment failed...")
-  BS --> Client: BookingResult.fail(reason)
-end
-
-note over BS: Update booking status to CONFIRMED
-
-BS -> Repo: save(booking)
-activate Repo
-Repo --> BS: booking
-deactivate Repo
-
-BS -> Logger: info("Booking confirmed...")
-activate Logger
-Logger --> BS: void
-deactivate Logger
-
-BS -> NS: notify(user, booking)
-activate NS
-NS --> BS: void
-deactivate NS
-
-BS --> Client: BookingResult.success(booking)
-deactivate BS
+BookingService o--> "1" PricingStrategy : injects
 @enduml
 ```
+
+### Observer Pattern Class Diagram (Real-Time Notifications)
+
+```plantuml
+@startuml
+skinparam classAttributeIconSize 0
+skinparam roundcorner 8
+skinparam shadowing false
+skinparam monochrome true
+
+interface Subject <<interface>> {
+    +attach(observer: Observer): void
+    +detach(observer: Observer): void
+    +notifyObservers(event: BookingEvent): void
+}
+
+interface Observer <<interface>> {
+    +update(event: BookingEvent): void
+}
+
+abstract class BookingEvent {
+    -id: string
+    -timestamp: Date
+    -user: User
+    +BookingEvent(id: string, user: User, timestamp?: Date)
+    +getId(): string
+    +getUser(): User
+    +getTimestamp(): Date
+    +{abstract} getEventType(): string
+    +{abstract} getDetails(): string
+}
+
+class BookingConfirmedEvent {
+    -booking: Booking
+    +BookingConfirmedEvent(id: string, user: User, booking: Booking)
+    +getBooking(): Booking
+    +getEventType(): string
+    +getDetails(): string
+}
+
+class ShowReminderEvent {
+    -show: Show
+    -reminderMessage: string
+    +ShowReminderEvent(id: string, user: User, show: Show, msg?: string)
+    +getShow(): Show
+    +getReminderMessage(): string
+    +getEventType(): string
+    +getDetails(): string
+}
+
+class OfferBroadcastEvent {
+    -offerTitle: string
+    -promoCode: string
+    -discountPercentage: number
+    +OfferBroadcastEvent(id: string, user: User, title: string, code: string, discount: number)
+    +getOfferTitle(): string
+    +getPromoCode(): string
+    +getDiscountPercentage(): number
+    +getEventType(): string
+    +getDetails(): string
+}
+
+class BookingSubject {
+    -observers: Observer[]
+    +attach(observer: Observer): void
+    +detach(observer: Observer): void
+    +notifyObservers(event: BookingEvent): void
+    +getObservers(): Observer[]
+}
+
+class ObservableNotificationService {
+    +notify(user: User, booking: Booking): void
+}
+
+interface NotificationService <<interface>> {
+    +notify(user: User, booking: Booking): void
+}
+
+class EmailNotifier {
+    +update(event: BookingEvent): void
+}
+
+class SMSNotifier {
+    +update(event: BookingEvent): void
+}
+
+class PushNotifier {
+    +update(event: BookingEvent): void
+}
+
+BookingEvent <|-- BookingConfirmedEvent
+BookingEvent <|-- ShowReminderEvent
+BookingEvent <|-- OfferBroadcastEvent
+
+Subject <|.. BookingSubject
+BookingSubject <|-- ObservableNotificationService
+NotificationService <|.. ObservableNotificationService
+
+Observer <|.. EmailNotifier
+Observer <|.. SMSNotifier
+Observer <|.. PushNotifier
+
+BookingSubject o--> "*" Observer : observers
+Subject ..> BookingEvent : publishes
+Observer ..> BookingEvent : receives
+@enduml
+```
+
+### Command Pattern Class Diagram (Transactional Booking & Rollback)
+
+```plantuml
+@startuml
+skinparam classAttributeIconSize 0
+skinparam roundcorner 8
+skinparam shadowing false
+skinparam monochrome true
+
+interface Command <<interface>> {
+    +execute(): boolean
+    +undo(): void
+    +getName(): string
+}
+
+class SelectSeatCommand {
+    -seats: Seat[]
+    -selected: boolean
+    +SelectSeatCommand(seats: Seat[])
+    +execute(): boolean
+    +undo(): void
+    +isSelected(): boolean
+    +getName(): string
+}
+
+class ReserveSeatCommand {
+    -seatAllocator: SeatAllocationStrategy
+    -show: Show
+    -seats: Seat[]
+    -reserved: boolean
+    +ReserveSeatCommand(seatAllocator: SeatAllocationStrategy, show: Show, seats: Seat[])
+    +execute(): boolean
+    +undo(): void
+    +isReserved(): boolean
+    +getName(): string
+}
+
+class ConfirmPaymentCommand {
+    -paymentGateway: PaymentGatewayStrategy
+    -user: User
+    -amount: Money
+    -paymentDetails: PaymentDetails
+    -paymentResult: PaymentResult | null
+    +ConfirmPaymentCommand(gateway: PaymentGatewayStrategy, user: User, amount: Money, details: PaymentDetails)
+    +execute(): boolean
+    +undo(): void
+    +getPaymentResult(): PaymentResult | null
+    +getName(): string
+}
+
+class SendConfirmationCommand {
+    -subject: Subject
+    -user: User
+    -booking: Booking
+    -sent: boolean
+    +SendConfirmationCommand(subject: Subject, user: User, booking: Booking)
+    +execute(): boolean
+    +undo(): void
+    +isSent(): boolean
+    +getName(): string
+}
+
+class BookingInvoker {
+    -history: Command[]
+    +execute(command: Command): boolean
+    +undoLast(): void
+    +rollback(): void
+    +executePipeline(commands: Command[]): boolean
+    +getHistory(): Command[]
+    +clearHistory(): void
+}
+
+class BookingService {
+    +bookWithCommands(booking: Booking, details: PaymentDetails, invoker?: BookingInvoker): BookingResult
+}
+
+Command <|.. SelectSeatCommand
+Command <|.. ReserveSeatCommand
+Command <|.. ConfirmPaymentCommand
+Command <|.. SendConfirmationCommand
+
+BookingInvoker o--> "*" Command : history stack
+BookingService ..> BookingInvoker : uses
+BookingService ..> Command : creates & dispatches
+@enduml
+```
+
+### Behavioral Architecture Overview Diagram
+
+```plantuml
+@startuml
+skinparam classAttributeIconSize 0
+skinparam roundcorner 8
+skinparam shadowing false
+skinparam monochrome true
+
+interface PricingStrategy <<Strategy>> {
+    +calculatePrice(show: Show, seat: Seat, user: User): Money
+}
+
+interface Subject <<Observer>> {
+    +attach(observer: Observer): void
+    +detach(observer: Observer): void
+    +notifyObservers(event: BookingEvent): void
+}
+
+interface Command <<Command>> {
+    +execute(): boolean
+    +undo(): void
+    +getName(): string
+}
+
+class BookingInvoker <<Invoker>> {
+    -history: Command[]
+    +executePipeline(commands: Command[]): boolean
+    +rollback(): void
+}
+
+class BookingService <<Client / Orchestrator>> {
+    -pricing: PricingStrategy
+    -notifier: NotificationService
+    +book(booking: Booking, details: PaymentDetails): BookingResult
+    +bookWithCommands(booking: Booking, details: PaymentDetails, invoker?: BookingInvoker): BookingResult
+}
+
+BookingService o--> "1" PricingStrategy : dynamic pricing
+BookingService o--> "1" Subject : publishes events
+BookingService ..> BookingInvoker : executes pipelines
+BookingInvoker o--> "*" Command : manages & rolls back
+@enduml
+```
+
+---
+
+## 📑 Assignment Deliverables
+
+- [UML_Diagrams.pdf](UML_Diagrams.pdf): High-resolution PDF compiling all behavioral pattern class diagrams and system architecture.
+- [Design_Note.pdf](Design_Note.pdf): 642-word design explanation covering Strategy maintainability, Observer extensibility, and Command transactional rollback.
+- [Code_Pseudocode.txt](Code_Pseudocode.txt): Clean, comment-free technical specification of classes, interfaces, and pseudocode algorithms.
