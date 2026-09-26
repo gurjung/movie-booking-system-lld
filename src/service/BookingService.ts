@@ -9,6 +9,12 @@ import {
 import { Booking, Money, PaymentDetails } from "../model";
 import { BookingResult } from "../model/BookingResult";
 import { BookingRepository } from "../repository/BookingRepository";
+import {
+  BookingInvoker,
+  ConfirmPaymentCommand,
+  ReserveSeatCommand,
+  SelectSeatCommand,
+} from "../command";
 
 export class BookingService {
   private seatAllocator: SeatAllocationStrategy;
@@ -102,4 +108,56 @@ export class BookingService {
 
     return BookingResult.success(booking);
   }
+
+  public bookWithCommands(
+    booking: Booking,
+    paymentDetails: PaymentDetails,
+    invoker: BookingInvoker = new BookingInvoker(),
+  ): BookingResult {
+    const user = booking.getUser();
+    const show = booking.getShow();
+    const seats = booking.getSeats();
+
+    this.logger.info(
+      `Command pipeline booking started for user: ${user.getName()} (ID: ${user.getId()}) for show: ${show.getId()}`,
+    );
+
+    const total = this.calculateTotal(booking);
+    booking.setAmount(total);
+
+    const selectCmd = new SelectSeatCommand(seats);
+    const reserveCmd = new ReserveSeatCommand(this.seatAllocator, show, seats);
+    const paymentCmd = new ConfirmPaymentCommand(
+      this.payment,
+      user,
+      total,
+      paymentDetails,
+    );
+
+    const pipelineSuccess = invoker.executePipeline([
+      selectCmd,
+      reserveCmd,
+      paymentCmd,
+    ]);
+
+    if (!pipelineSuccess) {
+      booking.setStatus(BookingStatus.FAILED);
+      const reason =
+        paymentCmd.getPaymentResult()?.getFailureReason() ??
+        "Booking pipeline failed and was rolled back";
+      this.logger.error(`Booking pipeline failed: ${reason}`);
+      return BookingResult.fail(reason);
+    }
+
+    booking.setStatus(BookingStatus.CONFIRMED);
+    this.repo.save(booking);
+    this.logger.info(
+      `Booking confirmed via command pipeline! Booking ID: ${booking.getId()}`,
+    );
+
+    this.notifier.notify(user, booking);
+
+    return BookingResult.success(booking);
+  }
 }
+
