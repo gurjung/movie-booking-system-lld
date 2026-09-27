@@ -1,50 +1,102 @@
 # Movie Booking System (Low-Level Design)
 
-A highly structured, clean-architecture Low-Level Design (LLD) implementation of a Movie Booking System in TypeScript. This project demonstrates object-oriented design principles (SOLID), dependency injection, and several behavioral and creational design patterns.
+A production-ready, clean-architecture Low-Level Design (LLD) implementation of a Movie Booking System in TypeScript. This project demonstrates strict adherence to Object-Oriented Design (OOD) principles, SOLID tenets, and Gang of Four (GoF) design patterns across Creational, Structural, and Behavioral paradigms.
 
 ---
 
-## 🏗️ Architecture & Design Patterns
+## 🏗️ Architecture & Core Principles
 
-The project follows clean architectural boundaries by separating data structures, interfaces, and concrete business logic.
+The codebase is organized into cleanly decoupled layers separating domain models, behavioral contracts, stateful components, and business orchestrators:
 
-### Design Patterns Used
+- **Single Responsibility Principle (SRP)**: Each component possesses a singular responsibility. Domain entities encapsulate attributes, strategies compute specific business logic, observers handle notifications, and commands encapsulate transactional actions.
+- **Open/Closed Principle (OCP)**: The system is openly extensible via polymorphism without modifying tested source code. Dynamic pricing strategies, snack decorators, notification channels, payment chain handlers, and booking workflows can be added seamlessly.
+- **Liskov Substitution Principle (LSP)**: All derived implementations (e.g., ticket variants, snack decorators, composite seat components, pricing strategies, and booking workflows) strictly uphold base contract guarantees.
+- **Interface Segregation Principle (ISP)**: Granular interfaces (`ISnack`, `SeatComponent`, `Subject`, `Observer`, `Command`, `SeatState`, `PaymentHandler`, `BookingBuilder`, `TicketFactory`) prevent client dependencies on unused signatures.
+- **Dependency Inversion Principle (DIP)**: Orchestrators and workflows depend entirely upon abstractions, with concrete implementations injected via Dependency Injection (DI).
 
-#### Creational Patterns
+---
 
-1. **Simple Factory Pattern**:
-   - **Ticket Factory** (`TicketFactory`, `SimpleTicketFactory`): Encapsulates polymorphic creation of `Ticket` subclasses (`StandardTicket`, `PremiumTicket`, `IMAXTicket`, `ReclinerTicket`) based on `TicketType` and seat validation.
-2. **Builder Pattern**:
-   - **Booking Builders** (`BookingBuilder`, `RegularBookingBuilder`, `VIPBookingBuilder`): Separates the step-by-step construction of complex `Booking` objects from their representation. Supports fluent addition of tickets, snacks, coupons, loyalty points, and special requests, with validation before instantiating immutable bookings. `VIPBookingBuilder` enforces VIP-specific invariants (disallowing standard tickets, auto-injecting complimentary welcome snacks).
-3. **Singleton Pattern**:
-   - **Logger** (`Logger` implementing `LoggingService`): A lazily initialized, shared logging instance accessed via `Logger.getInstance()` and injected into `BookingService` via constructor injection to maintain testability.
+## 🧩 Design Patterns Catalog
 
-#### Structural Patterns
+### 1. Creational Patterns
 
-1. **Decorator Pattern**:
-   - **Snack Add-ons** (`ISnack`, `BaseSnack`, `Popcorn`, `Soda`, `Nachos`, `SnackDecorator`, `LargeSizeDecorator`, `ExtraButterDecorator`, `ComboWrapDecorator`, `GlutenFreePackagingDecorator`): Encapsulates dynamic snack customization and pricing without subclass explosion. Correctly aggregates dynamic pricing, preparation time, and dietary tags (`vegetarian`, `contains-dairy`, `combo-deal`, `gluten-free-certified`).
-2. **Composite Pattern**:
-   - **Theater Layout Hierarchy** (`SeatComponent`, `Seat`, `Row`, `Screen`): Establishes a 3-tier hierarchy (`Screen` → `Row` → `Seat`) allowing uniform operations across leaf nodes and composite containers. Supports contiguous seat search, atomic multi-seat reservation, row-level stats, screen-wide occupancy calculation, and batch price adjustments.
+1. **Simple Factory Pattern (`TicketFactory`, `SimpleTicketFactory`)**:
+   - Encapsulates polymorphic instantiation of `Ticket` subclasses (`StandardTicket`, `PremiumTicket`, `IMAXTicket`, `ReclinerTicket`) based on `TicketType`.
+   - Validates that the assigned `Seat` conforms to the allowed seat types defined by the ticket variant before instantiation.
 
-#### Behavioral Patterns
+2. **Builder Pattern (`BookingBuilder`, `RegularBookingBuilder`, `VIPBookingBuilder`)**:
+   - Separates the incremental construction of complex `Booking` objects from their representation.
+   - Provides a fluent interface for attaching tickets, snacks, coupons, loyalty points, and special requests.
+   - Enforces domain invariants before instantiation (e.g., `VIPBookingBuilder` prevents assignment of standard tickets and automatically injects complimentary welcome snacks).
 
-1. **Strategy Pattern (Dynamic Pricing)**:
-   - Dynamic surcharge and discount calculation decoupled from `BookingService`.
-   - Strategies implemented: `WeekdayPricingStrategy` (weekday concession), `WeekendSurgePricingStrategy` (weekend demand surge), `FestivalDiscountPricingStrategy` (promotional festival discounts), `DefaultPricingStrategy`, `PeakHourPricingStrategy`, and `VIPPricingStrategy`.
-   - Strategies are injected into `BookingService` at runtime via Dependency Injection.
+3. **Singleton Pattern (`Logger` implementing `LoggingService`)**:
+   - Provides a globally coordinated, lazily initialized logging instance via `Logger.getInstance()`.
+   - Injected into `BookingService` and `BookingWorkflow` via constructor injection to safeguard testability.
+
+---
+
+### 2. Structural Patterns
+
+1. **Decorator Pattern (Snack Customization & Add-ons)**:
+   - Dynamically decorates base snacks (`Popcorn`, `Soda`, `Nachos`) with toppings, sizes, and packaging (`LargeSizeDecorator`, `ExtraButterDecorator`, `ComboWrapDecorator`, `GlutenFreePackagingDecorator`).
+   - Recursively aggregates cumulative pricing, preparation times, descriptions, and dietary allergen tags (`vegetarian`, `contains-dairy`, `combo-deal`, `gluten-free-certified`) without subclass explosion.
+
+2. **Composite Pattern (Theater Layout & Seat Management)**:
+   - Establishes a 3-tier tree hierarchy (`Screen` → `Row` → `Seat`) sharing a common `SeatComponent` interface.
+   - Enables uniform operations across individual seats and composite containers: contiguous seat lookup, atomic multi-seat reservation, row-level analytics, screen-wide occupancy calculation, and batch price adjustments.
+
+---
+
+### 3. Behavioral Patterns
+
+1. **Strategy Pattern (Dynamic Pricing, Seat Allocation, Payment Gateways)**:
+   - Decouples volatile algorithmic logic from core booking orchestrators.
+   - **Pricing Strategies**: `WeekdayPricingStrategy` (weekday concession), `WeekendSurgePricingStrategy` (weekend demand surge), `FestivalDiscountPricingStrategy` (promotional festival discounts), `PeakHourPricingStrategy`, `VIPPricingStrategy`, and `DefaultPricingStrategy`.
+   - **Seat Allocation Strategies**: `InMemorySeatAllocationStrategy` and `CompositeSeatAllocationStrategy`.
+   - **Payment Gateway Strategies**: `MockPaymentGateway` with failure simulation capability.
+
 2. **Observer Pattern (Real-Time Multi-Channel Notifications)**:
-   - Event-driven subscriber model decoupling notification delivery from core booking transactions.
+   - Implements a decoupled pub/sub notification backbone.
    - Core contracts: `Subject` and `Observer`.
    - Event hierarchy: `BookingEvent` base class with concrete events (`BookingConfirmedEvent`, `ShowReminderEvent`, `OfferBroadcastEvent`).
-   - Concrete notifiers: `EmailNotifier`, `SMSNotifier`, and `PushNotifier`.
-   - Thread/iteration safety: uses snapshot array copies during event dispatch.
-   - `ObservableNotificationService` bridges `NotificationService` and `BookingSubject` for seamless integration into `BookingService`.
-3. **Command Pattern (Transactional Booking Actions & LIFO Rollback)**:
-   - Encapsulates booking operations into discrete, reversible command objects implementing `execute(): boolean` and `undo(): void`.
+   - Observers: `EmailNotifier`, `SMSNotifier`, and `PushNotifier`.
+   - Uses snapshot array duplication during event dispatch to ensure thread-safe and iteration-safe dynamic subscription and unsubscription.
+   - `ObservableNotificationService` bridges `NotificationService` and `BookingSubject` for zero-overhead integration into `BookingService`.
+
+3. **Command Pattern (Transactional Booking & LIFO Rollback)**:
+   - Encapsulates discrete transactional operations as reversible command objects implementing `execute(): boolean` and `undo(): void`.
    - Concrete commands: `SelectSeatCommand`, `ReserveSeatCommand`, `ConfirmPaymentCommand`, and `SendConfirmationCommand`.
    - `BookingInvoker` executes command pipelines and maintains a history stack. Upon any downstream failure (e.g., payment declined), it performs an automatic LIFO rollback, undoing prior commands and restoring reserved seats to available status.
-4. **Repository Pattern**: Abstracted persistence using an in-memory data store for `Booking` objects (`BookingRepository`).
-5. **Dependency Injection**: Dependencies (`PricingStrategy`, `SeatAllocationStrategy`, `PaymentGatewayStrategy`, `BookingRepository`, `NotificationService`, `LoggingService`) are injected into the orchestrator `BookingService` constructor for inversion of control and decoupled testability.
+
+4. **State Pattern (Seat Lifecycle Management & Invariant Enforcement)**:
+   - Manages seat status transitions through dedicated state objects implementing `SeatState`:
+     - `AvailableState`: Initial status. Allows reservation (`reserve()`); throws `InvalidSeatStateException` on release or confirmation.
+     - `HeldState`: Temporary reservation. Transitions to `BookedState` on `confirm()`, or `ReleasedState` on `release()`. Throws exception on duplicate reservation.
+     - `BookedState`: Confirmed status. Can transition to `ReleasedState` on cancellation (`release()`); prohibits re-reservation or confirmation.
+     - `ReleasedState`: Re-enters the booking lifecycle. Can transition back to `HeldState` on `reserve()`; prohibits duplicate release or confirmation without reservation.
+   - The `Seat` context delegates lifecycle operations directly to its active state object, eliminating complex conditional switch/if branching and enforcing strict transition rules.
+
+5. **Chain of Responsibility Pattern (Modular Payment Processing Pipeline)**:
+   - Processes booking payment transactions through a decoupled sequence of specialized handlers implementing `PaymentHandler` (`BasePaymentHandler`):
+     - `CouponValidationHandler`: Validates and applies promotional coupon discounts to the order total.
+     - `WalletDeductionHandler`: Deducts payable balance from the user's available digital wallet. If the wallet covers the full amount, marks transaction complete and bypasses downstream payment gateways.
+     - `TaxComputationHandler`: Applies statutory taxes (e.g., 18% GST) to the remaining balance.
+     - `FinalPaymentGatewayHandler`: Dispatches any remaining balance to the external payment gateway.
+   - `PaymentChainBuilder`: Provides a fluent builder to assemble and link handlers into custom processing pipelines.
+   - `PaymentContext`: Stateful transaction context tracked across the pipeline, maintaining current balance, user details, coupon, wallet deductions, and applied taxes.
+
+6. **Template Method Pattern (Structured Booking Workflows)**:
+   - Defines the invariant skeleton of a booking lifecycle within `BookingWorkflow.processBooking()`, delegating specific steps to specialized subclasses:
+     - Step 1: `validateRequest(user, show, seats)` (Primitive operation / abstract hook)
+     - Step 2: `allocateSeats(show, seats)` (Concrete step; reserves seats and transitions seat state to `HeldState`)
+     - Step 3: `processPayment(user, show, seats, coupon?, paymentDetails?)` (Primitive operation / abstract hook; delegates to payment chain)
+     - Step 4: `confirmSeats(seats)` (Concrete step; transitions seat state to `BookedState`)
+     - Step 5: `createBooking(user, show, seats, coupon?)` (Concrete step; generates booking record and persists in repository)
+     - Step 6: `sendConfirmation(user, show, seats, booking)` (Concrete step; emits notification)
+     - Error Recovery: `rollbackSeats(show, seats)` (Concrete step executed in `catch` block; safely releases held seats to `ReleasedState`)
+   - Concrete workflows:
+     - `RegularBookingWorkflow`: Enforces regular customer constraints (maximum 6 seats limit) and standard pricing.
+     - `CorporateBookingWorkflow`: Enforces corporate bulk booking policies (minimum 5 seats limit) and automatically applies percentage volume discounts (e.g., 20%).
 
 ---
 
@@ -52,23 +104,35 @@ The project follows clean architectural boundaries by separating data structures
 
 ```text
 src/
+├── chain/            # Chain of Responsibility pattern (PaymentHandler, BasePaymentHandler, Handlers, Builder, Context)
 ├── command/          # Command pattern (Command, SelectSeat, ReserveSeat, ConfirmPayment, SendConfirmation, BookingInvoker)
-├── enums/            # Domain-specific enumerations (SeatType, TicketType, BookingStatus, SeatStatus)
-├── interfaces/       # Core domain contracts, strategy definitions, builders, and factories
-├── model/            # Core domain entities (User, Movie, Seat, Row, Show, Screen, Booking, Snack, Coupon, Money, etc.)
+├── enums/            # Domain enumerations (SeatType, TicketType, BookingStatus, SeatStatus, PaymentMethod)
+├── interfaces/       # Core contracts, builders, factories, strategies, and notification/logging interfaces
+├── model/            # Domain entities (User, Movie, Seat, Row, Screen, Show, Booking, Snack, Coupon, Money, Address, etc.)
 ├── observer/         # Observer pattern (Subject, Observer, BookingSubject, events, notifiers)
 │   ├── events/       # Event hierarchy (BookingEvent, BookingConfirmedEvent, ShowReminderEvent, OfferBroadcastEvent)
 │   └── notifiers/    # Concrete observers (EmailNotifier, SMSNotifier, PushNotifier)
-├── repository/       # Data access and storage layers (BookingRepository)
-├── service/          # Core orchestrator business logic (BookingService, book, bookWithCommands)
+├── repository/       # Data persistence abstractions and in-memory store (BookingRepository)
+├── scenarios/        # Modularized end-to-end demo suites
+│   ├── 01_builderDemos.ts          # Scenarios 1-3: Regular/VIP Builder & Invariant Validation
+│   ├── 02_structuralDemos.ts       # Scenarios 4-6: Decorator Snacks & Composite Theater Layout
+│   ├── 03_behavioralCoreDemos.ts   # Scenarios 7-8: Strategy Pricing & Observer Notifications
+│   ├── 04_commandDemos.ts          # Scenarios 9-11: Command Transaction Pipeline & LIFO Rollback
+│   ├── 05_stateDemos.ts            # Scenario 12: Seat Lifecycle Transitions & Error Handling
+│   ├── 06_chainAndWorkflowDemos.ts # Scenarios 13-15: Payment Pipeline & Template Method Workflows
+│   └── index.ts                    # Scenario module exports
+├── service/          # Orchestrators and service layer (BookingService)
 ├── serviceimpl/      # Concrete implementations
-│   ├── notification/ # Notification services (EmailNotification, ObservableNotificationService)
-│   ├── payment-gateway/ # Payment gateways (MockPaymentGateway with failure simulation)
-│   ├── pricing/      # Dynamic pricing strategies (Weekday, WeekendSurge, FestivalDiscount, PeakHour, VIP)
-│   └── seatAllocation/ # Seat allocation strategies (InMemorySeatAllocation, CompositeSeatAllocation)
-├── snacks/           # Snack components and decorators (Popcorn, Soda, Nachos, LargeSize, ExtraButter, ComboWrap, GlutenFree)
-├── tickets/          # Polymorphic ticket hierarchy (Ticket, StandardTicket, PremiumTicket, IMAXTicket, ReclinerTicket)
-└── main.ts           # Composition root, dependency wiring, and 11 demo scenarios
+│   ├── Logger.ts                   # Thread-safe Singleton logging service
+│   ├── notification/               # EmailNotificationService, ObservableNotificationService
+│   ├── payment-gateway/            # MockPaymentGateway with failure simulation
+│   ├── pricing/                    # Weekday, WeekendSurge, FestivalDiscount, PeakHour, VIP
+│   └── seatAllocation/             # InMemorySeatAllocationStrategy, CompositeSeatAllocationStrategy
+├── snacks/           # Decorator pattern snack components and concrete decorators
+├── state/            # State pattern (SeatState, Available, Held, Booked, Released, Exceptions)
+├── tickets/          # Polymorphic ticket hierarchy (StandardTicket, PremiumTicket, IMAXTicket, ReclinerTicket)
+├── workflow/         # Template Method pattern (BookingWorkflow, RegularBookingWorkflow, CorporateBookingWorkflow)
+└── main.ts           # Application entry point invoking all modular demo suites
 ```
 
 ---
@@ -77,11 +141,12 @@ src/
 
 ### Prerequisites
 
-- [Node.js](https://nodejs.org/) (v16+)
+- [Node.js](https://nodejs.org/) (v16 or higher)
+- [npm](https://www.npmjs.com/) (v8 or higher)
 
 ### Installation
 
-Clone the repository and install the development dependencies:
+Clone the repository and install dependencies:
 
 ```bash
 npm install
@@ -89,7 +154,7 @@ npm install
 
 ### Run the Application
 
-To run the main execution workflow (demonstrating all 11 demo scenarios across creational, structural, and behavioral patterns: Regular Booking, VIP Booking with auto-complimentary snacks, VIP validation error handling, Decorator snack composition, Composite theater layout reservation, integrated booking, Strategy dynamic pricing, Observer multi-channel notifications and dynamic unsubscription, Command transactional execution, Command automatic rollback on payment failure, and BookingService command integration):
+Execute the end-to-end demonstration runner:
 
 ```bash
 npm start
@@ -97,11 +162,35 @@ npm start
 
 ---
 
+## 🧪 Comprehensive Demo Scenarios
+
+The test suite runs 15 end-to-end scenarios covering all implemented design patterns:
+
+| # | Pattern / Category | Scenario Description |
+|---|---|---|
+| **1** | Builder Pattern | Regular Booking with Standard + Premium tickets, snacks, and coupon discount. |
+| **2** | Builder Pattern | VIP Booking with Premium + Recliner tickets and auto-injected complimentary snack. |
+| **3** | Builder Pattern | VIP Booking validation error handling when attempting to add a Standard ticket. |
+| **4** | Decorator Pattern | Dynamic snack add-on composition (Popcorn + Extra Butter + Large Size + Combo Wrap + Gluten Free Packaging). |
+| **5** | Composite Pattern | 3-tier theater hierarchy (`Screen` → `Row` → `Seat`), contiguous seat search, and occupancy calculation. |
+| **6** | Structural Integration | Integrated booking flow combining decorated snacks and composite screen seat allocation. |
+| **7** | Strategy Pattern | Dynamic pricing engine: Weekday concession, Weekend demand surge, and Festival promotional discount. |
+| **8** | Observer Pattern | Real-time multi-channel event publishing (`EmailNotifier`, `SMSNotifier`, `PushNotifier`) with dynamic detachment. |
+| **9** | Command Pattern | Transactional booking execution pipeline via `BookingInvoker` (`Select` → `Reserve` → `Pay` → `Confirm`). |
+| **10** | Command Pattern | Automatic LIFO rollback restoring seat availability when payment fails downstream. |
+| **11** | Command Integration | `BookingService.bookWithCommands()` end-to-end transactional orchestration. |
+| **12** | State Pattern | Seat lifecycle transitions (`AVAILABLE` → `HELD` → `BOOKED` → `RELEASED`) and invalid transition exception handling. |
+| **13** | Chain of Responsibility | Modular payment pipeline: Coupon validation → Wallet balance deduction → GST tax computation → Gateway charge. |
+| **14** | Template Method | Regular vs Corporate booking workflows: Max seat limits vs Bulk discounts (5+ seats, 20% discount). |
+| **15** | Workflow Rollback | Complete booking workflow failure handling with automatic seat release and recovery re-booking. |
+
+---
+
 ## 📊 UML Diagrams
 
-Below is the PlantUML syntax for the system's design diagrams. You can render these using any PlantUML viewer or editor.
+Below is the PlantUML specification for all system architecture and pattern implementations. You can render these diagrams using any standard PlantUML viewer or IDE plugin.
 
-### Class Diagram
+### 1. Core Domain Class Diagram
 
 ```plantuml
 @startuml
@@ -116,7 +205,9 @@ enum SeatType {
 
 enum SeatStatus {
   AVAILABLE
+  HELD
   BOOKED
+  RELEASED
 }
 
 enum TicketType {
@@ -149,13 +240,9 @@ class Address {
   - pincode: string
   + constructor(street: string, city: string, state: string, pincode: string)
   + getStreet(): string
-  + setStreet(street: string): void
   + getCity(): string
-  + setCity(city: string): void
   + getState(): string
-  + setState(state: string): void
   + getPincode(): string
-  + setPincode(pincode: string): void
 }
 
 class User {
@@ -164,17 +251,16 @@ class User {
   - email: string
   - phone: string
   - address: Address
-  + constructor(id: string, name: string, email: string, phone: string, address: Address)
+  - walletBalance: number
+  + constructor(id: string, name: string, email: string, phone: string, address: Address, walletBalance?: number)
   + getId(): string
-  + setId(id: string): void
   + getName(): string
-  + setName(name: string): void
   + getEmail(): string
-  + setEmail(email: string): void
   + getPhone(): string
-  + setPhone(phone: string): void
   + getAddress(): Address
-  + setAddress(address: Address): void
+  + getWalletBalance(): number
+  + deductWalletBalance(amount: number): boolean
+  + addWalletBalance(amount: number): void
 }
 
 class Movie {
@@ -184,19 +270,13 @@ class Movie {
   - genre: string
   - language: string
   - rating: string
-  + constructor(id: string, title: string, durationInMinutes: number, genre: string, language: string, rating: string)
+  + constructor(id: string, title: string, duration: number, genre: string, language: string, rating: string)
   + getId(): string
-  + setId(id: string): void
   + getTitle(): string
-  + setTitle(title: string): void
   + getDuration(): number
-  + setDuration(durationInMinutes: number): void
   + getGenre(): string
-  + setGenre(genre: string): void
   + getLanguage(): string
-  + setLanguage(language: string): void
   + getRating(): string
-  + setRating(rating: string): void
 }
 
 class Seat {
@@ -204,15 +284,19 @@ class Seat {
   - type: SeatType
   - row: number
   - number: number
-  + constructor(id: string, type: SeatType, row: number, number: number)
+  - priceModifier: number
+  - state: SeatState
+  + constructor(id: string, type: SeatType, row: number, number: number, priceModifier?: number, isAvailable?: boolean)
   + getId(): string
-  + setId(id: string): void
   + getType(): SeatType
-  + setType(type: SeatType): void
   + getRow(): number
-  + setRow(row: number): void
   + getNumber(): number
-  + setNumber(number: number): void
+  + reserve(): void
+  + release(): void
+  + confirm(): void
+  + getState(): SeatState
+  + setState(state: SeatState): void
+  + isSeatAvailable(): boolean
 }
 
 class Screen {
@@ -221,23 +305,8 @@ class Screen {
   - seats: Seat[]
   + constructor(id: string, name: string, seats: Seat[])
   + getId(): string
-  + setId(id: string): void
   + getName(): string
-  + setName(name: string): void
   + getSeats(): Seat[]
-  + setSeats(seats: Seat[]): void
-}
-
-class Theater {
-  - id: string
-  - name: string
-  - address: Address
-  - screens: Screen[]
-  + constructor(id: string, name: string, address: Address, screens: Screen[])
-  + getId(): string
-  + setId(id: string): void
-  + getName(): string
-  + setName(name: string): void
 }
 
 class Show {
@@ -248,31 +317,10 @@ class Show {
   - endTime: Date
   + constructor(id: string, movie: Movie, screen: Screen, start: Date, end: Date)
   + getId(): string
-  + setId(id: string): void
   + getMovie(): Movie
-  + setMovie(movie: Movie): void
   + getScreen(): Screen
-  + setScreen(screen: Screen): void
   + getStartTime(): Date
-  + setStartTime(start: Date): void
   + getEndTime(): Date
-  + setEndTime(end: Date): void
-}
-
-class Snack {
-  - id: string
-  - name: string
-  - price: Money
-  - complimentary: boolean
-  + constructor(id: string, name: string, price: Money, complimentary: boolean)
-  + getId(): string
-  + setId(id: string): void
-  + getName(): string
-  + setName(name: string): void
-  + getPrice(): Money
-  + setPrice(price: Money): void
-  + isComplimentary(): boolean
-  + setComplimentary(complimentary: boolean): void
 }
 
 class Coupon {
@@ -280,9 +328,7 @@ class Coupon {
   - discountAmount: Money
   + constructor(code: string, discountAmount: Money)
   + getCode(): string
-  + setCode(code: string): void
   + getDiscountAmount(): Money
-  + setDiscountAmount(discountAmount: Money): void
 }
 
 abstract class Ticket {
@@ -296,7 +342,6 @@ abstract class Ticket {
 }
 
 class StandardTicket extends Ticket {
-  + constructor(seat: Seat)
   + getType(): TicketType
   + getBasePrice(): Money
   + getAmenities(): string[]
@@ -304,7 +349,6 @@ class StandardTicket extends Ticket {
 }
 
 class PremiumTicket extends Ticket {
-  + constructor(seat: Seat)
   + getType(): TicketType
   + getBasePrice(): Money
   + getAmenities(): string[]
@@ -312,7 +356,6 @@ class PremiumTicket extends Ticket {
 }
 
 class IMAXTicket extends Ticket {
-  + constructor(seat: Seat)
   + getType(): TicketType
   + getBasePrice(): Money
   + getAmenities(): string[]
@@ -320,30 +363,10 @@ class IMAXTicket extends Ticket {
 }
 
 class ReclinerTicket extends Ticket {
-  + constructor(seat: Seat)
   + getType(): TicketType
   + getBasePrice(): Money
   + getAmenities(): string[]
   + getAllowedSeatTypes(): SeatType[]
-}
-
-class PaymentDetails {
-  - method: PaymentMethod
-  + constructor(method: PaymentMethod)
-  + getMethod(): PaymentMethod
-}
-
-class PaymentResult {
-  - success: boolean
-  - transactionId: string | null
-  - failureReason: string | null
-  + constructor(success: boolean, transactionId: string | null, failureReason: string | null)
-  + isSuccess(): boolean
-  + setSuccess(success: boolean): void
-  + getTransactionId(): string | null
-  + setTransactionId(transactionId: string | null): void
-  + getFailureReason(): string | null
-  + setFailureReason(failureReason: string | null): void
 }
 
 class Booking {
@@ -358,221 +381,99 @@ class Booking {
   - coupon: Coupon | null
   - loyaltyPoints: number
   - specialRequests: string[]
-  + constructor(id: string, show: Show, user: User, seats: Seat[], status: BookingStatus, amount: Money, tickets: Ticket[], snacks: Snack[], coupon: Coupon | null, loyaltyPoints: number, specialRequests: string[])
   + getId(): string
-  + setId(id: string): void
   + getShow(): Show
-  + setShow(show: Show): void
   + getUser(): User
-  + setUser(user: User): void
   + getSeats(): Seat[]
-  + setSeats(seats: Seat[]): void
   + getStatus(): BookingStatus
-  + setStatus(status: BookingStatus): void
   + getAmount(): Money
-  + setAmount(amount: Money): void
-  + getTickets(): Ticket[]
-  + setTickets(tickets: Ticket[]): void
-  + getSnacks(): Snack[]
-  + setSnacks(snacks: Snack[]): void
-  + getCoupon(): Coupon | null
-  + setCoupon(coupon: Coupon | null): void
-  + getLoyaltyPoints(): number
-  + setLoyaltyPoints(loyaltyPoints: number): void
-  + getSpecialRequests(): string[]
-  + setSpecialRequests(specialRequests: string[]): void
-}
-
-class BookingResult {
-  - ok: boolean
-  - booking: Booking | null
-  - errorMessage: string | null
-  - constructor(ok: boolean, booking: Booking | null, errorMessage: string | null)
-  + isOk(): boolean
-  + getBooking(): Booking | null
-  + getErrorMessage(): string | null
-  + {static} success(booking: Booking): BookingResult
-  + {static} fail(errorMessage: string): BookingResult
-}
-
-interface TicketFactory {
-  + createTicket(type: TicketType, seat: Seat): Ticket
-}
-
-class SimpleTicketFactory implements TicketFactory {
-  + createTicket(type: TicketType, seat: Seat): Ticket
-}
-
-interface BookingBuilder {
-  + forShow(show: Show): BookingBuilder
-  + forUser(user: User): BookingBuilder
-  + addTicket(seat: Seat, ticketType: TicketType): BookingBuilder
-  + addSnack(snack: Snack): BookingBuilder
-  + applyCoupon(coupon: Coupon): BookingBuilder
-  + withLoyaltyPoints(points: number): BookingBuilder
-  + withSpecialRequest(text: string): BookingBuilder
-  + build(): Booking
-}
-
-class RegularBookingBuilder implements BookingBuilder {
-  # ticketFactory: TicketFactory
-  # show: Show | null
-  # user: User | null
-  # tickets: Ticket[]
-  # snacks: Snack[]
-  # coupon: Coupon | null
-  # loyaltyPoints: number
-  # specialRequests: string[]
-  + constructor(ticketFactory: TicketFactory)
-  + forShow(show: Show): BookingBuilder
-  + forUser(user: User): BookingBuilder
-  + addTicket(seat: Seat, ticketType: TicketType): BookingBuilder
-  + addSnack(snack: Snack): BookingBuilder
-  + applyCoupon(coupon: Coupon): BookingBuilder
-  + withLoyaltyPoints(points: number): BookingBuilder
-  + withSpecialRequest(text: string): BookingBuilder
-  # validate(): void
-  # generateBookingId(): string
-  # reset(): void
-  + build(): Booking
-}
-
-class VIPBookingBuilder extends RegularBookingBuilder {
-  + constructor(ticketFactory: TicketFactory)
-  + build(): Booking
-}
-
-interface PricingStrategy {
-  + calculatePrice(show: Show, seat: Seat, user: User): Money
-}
-
-interface SeatAllocationStrategy {
-  + allocateSeats(show: Show, seats: Seat[]): boolean
-  + releaseSeats(show: Show, seats: Seat[]): void
-}
-
-interface PaymentGatewayStrategy {
-  + charge(user: User, amount: Money, paymentMethod: PaymentDetails): PaymentResult
-}
-
-interface NotificationService {
-  + notify(user: User, booking: Booking): void
-}
-
-interface LoggingService {
-  + info(msg: string): void
-  + warn(msg: string): void
-  + error(msg: string): void
-}
-
-class Logger implements LoggingService {
-  - {static} instance: Logger | null
-  - constructor()
-  + {static} getInstance(): Logger
-  + info(msg: string): void
-  + warn(msg: string): void
-  + error(msg: string): void
-}
-
-class DefaultPricingStrategy implements PricingStrategy {
-  + calculatePrice(show: Show, seat: Seat, user: User): Money
-}
-
-class PeakHourPricingStrategy implements PricingStrategy {
-  - {static} readonly PEAK_SURCHARGE: number
-  + calculatePrice(show: Show, seat: Seat, user: User): Money
-}
-
-class VIPPricingStrategy implements PricingStrategy {
-  - {static} readonly VIP_SURCHARGE: number
-  + calculatePrice(show: Show, seat: Seat, user: User): Money
-}
-
-class InMemorySeatAllocationStrategy implements SeatAllocationStrategy {
-  - bookedSeats: Set<string>
-  - buildKey(showId: string, seatId: string): string
-  + allocateSeats(show: Show, seats: Seat[]): boolean
-  + releaseSeats(show: Show, seats: Seat[]): void
-}
-
-class MockPaymentGateway implements PaymentGatewayStrategy {
-  + charge(user: User, amount: Money, details: PaymentDetails): PaymentResult
-}
-
-class EmailNotificationService implements NotificationService {
-  + notify(user: User, booking: Booking): void
-}
-
-class BookingRepository {
-  - bookings: Map<string, Booking>
-  + save(booking: Booking): Booking
-}
-
-class BookingService {
-  - seatAllocator: SeatAllocationStrategy
-  - pricing: PricingStrategy
-  - payment: PaymentGatewayStrategy
-  - repo: BookingRepository
-  - notifier: NotificationService
-  - logger: LoggingService
-  + constructor(pricing: PricingStrategy, seatAllocator: SeatAllocationStrategy, payment: PaymentGatewayStrategy, repo: BookingRepository, notifier: NotificationService, logger: LoggingService)
-  - calculateTotal(booking: Booking): Money
-  + book(booking: Booking, paymentDetails: PaymentDetails): BookingResult
 }
 
 User "1" *--> "1" Address
-Theater "1" *--> "*" Screen
-Theater "1" *--> "1" Address
 Screen "1" *--> "*" Seat
 Seat "1" *--> "1" SeatType
 Show "1" *--> "1" Movie
 Show "1" *--> "1" Screen
-
 Ticket "1" *--> "1" Seat
 Ticket "1" *--> "1" TicketType
-Ticket <|-- StandardTicket
-Ticket <|-- PremiumTicket
-Ticket <|-- IMAXTicket
-Ticket <|-- ReclinerTicket
-
 Booking "1" *--> "1" Show
 Booking "1" *--> "1" User
 Booking "1" *--> "*" Seat
 Booking "1" *--> "*" Ticket
-Booking "1" *--> "*" Snack
 Booking "1" o--> "0..1" Coupon
-Booking "1" *--> "1" BookingStatus
-Booking "1" *--> "1" Money
-BookingResult "1" *--> "0..1" Booking
+@enduml
+```
 
-TicketFactory <|.. SimpleTicketFactory
-SimpleTicketFactory ..> Ticket : creates
+---
 
-BookingBuilder <|.. RegularBookingBuilder
-RegularBookingBuilder <|-- VIPBookingBuilder
-RegularBookingBuilder "1" o--> "1" TicketFactory
-RegularBookingBuilder ..> Booking : builds
+### 2. State Pattern: State Transition Diagram (Seat Lifecycle)
 
-PricingStrategy <|.. DefaultPricingStrategy
-PricingStrategy <|.. PeakHourPricingStrategy
-PricingStrategy <|.. VIPPricingStrategy
+```plantuml
+@startuml
+skinparam state {
+  BackgroundColor White
+  BorderColor #2C3E50
+  ArrowColor #2C3E50
+  StartColor #27AE60
+  EndColor #C0392B
+  FontName Arial
+  FontSize 12
+}
+skinparam note {
+  BackgroundColor #FEF9E7
+  BorderColor #F39C12
+  FontName Arial
+  FontSize 11
+}
 
-SeatAllocationStrategy <|.. InMemorySeatAllocationStrategy
-PaymentGatewayStrategy <|.. MockPaymentGateway
-NotificationService <|.. EmailNotificationService
-LoggingService <|.. Logger
+[*] --> AVAILABLE
 
-BookingService "1" o--> "1" SeatAllocationStrategy
-BookingService "1" o--> "1" PricingStrategy
-BookingService "1" o--> "1" PaymentGatewayStrategy
-BookingService "1" o--> "1" BookingRepository
-BookingService "1" o--> "1" NotificationService
-BookingService "1" o--> "1" LoggingService
+AVAILABLE --> HELD : reserve()
+note on link
+  Temporary lock
+  acquired
+end note
+
+HELD --> BOOKED : confirm()
+note on link
+  Payment successful
+  Booking confirmed
+end note
+
+HELD --> RELEASED : release()
+note on link
+  Payment failure
+  or lock timeout
+end note
+
+BOOKED --> RELEASED : release()
+note on link
+  Booking cancellation
+end note
+
+RELEASED --> HELD : reserve()
+note on link
+  Seat re-reserved
+  by next user
+end note
+
+note right of AVAILABLE
+  <b>Invalid Transitions throw InvalidSeatStateException:</b>
+  - AVAILABLE.confirm()
+  - AVAILABLE.release()
+  - HELD.reserve()
+  - BOOKED.reserve()
+  - BOOKED.confirm()
+  - RELEASED.confirm()
+  - RELEASED.release()
+end note
 
 @enduml
 ```
 
-### Decorator Pattern Class Diagram (Snack Add-ons)
+---
+
+### 3. State Pattern: Class Diagram (Seat Lifecycle)
 
 ```plantuml
 @startuml
@@ -581,231 +482,78 @@ skinparam roundcorner 8
 skinparam shadowing false
 skinparam monochrome true
 
-interface ISnack <<interface>> {
-    +getId(): string
-    +getName(): string
-    +getPrice(): Money
-    +getPrepTime(): number
-    +getDietaryTags(): Set<string>
-    +getDescription(): string
-    +isComplimentary(): boolean
+interface SeatState <<interface>> {
+    +reserve(seat: Seat): void
+    +release(seat: Seat): void
+    +confirm(seat: Seat): void
+    +getStatus(): SeatStatus
 }
 
-abstract class BaseSnack {
-    #id: string
-    #name: string
-    #price: Money
-    #prepTime: number
-    #dietaryTags: Set<string>
-    #description: string
-    #complimentary: boolean
-    +getId(): string
-    +getName(): string
-    +getPrice(): Money
-    +getPrepTime(): number
-    +getDietaryTags(): Set<string>
-    +getDescription(): string
-    +isComplimentary(): boolean
+class AvailableState {
+    +reserve(seat: Seat): void
+    +release(seat: Seat): void
+    +confirm(seat: Seat): void
+    +getStatus(): SeatStatus
 }
 
-class Popcorn {
-    +Popcorn(id?: string, price?: Money)
+class HeldState {
+    +reserve(seat: Seat): void
+    +release(seat: Seat): void
+    +confirm(seat: Seat): void
+    +getStatus(): SeatStatus
 }
 
-class Soda {
-    +Soda(id?: string, price?: Money)
+class BookedState {
+    +reserve(seat: Seat): void
+    +release(seat: Seat): void
+    +confirm(seat: Seat): void
+    +getStatus(): SeatStatus
 }
 
-class Nachos {
-    +Nachos(id?: string, price?: Money)
+class ReleasedState {
+    +reserve(seat: Seat): void
+    +release(seat: Seat): void
+    +confirm(seat: Seat): void
+    +getStatus(): SeatStatus
 }
 
-abstract class SnackDecorator {
-    #inner: ISnack
-    +SnackDecorator(inner: ISnack)
-    +getId(): string
-    +getName(): string
-    +getPrice(): Money
-    +getPrepTime(): number
-    +getDietaryTags(): Set<string>
-    +getDescription(): string
-    +isComplimentary(): boolean
+class InvalidSeatStateException {
+    +constructor(message: string)
 }
 
-class LargeSizeDecorator {
-    +LargeSizeDecorator(inner: ISnack)
-    +getPrice(): Money
-    +getPrepTime(): number
-    +getDescription(): string
-}
-
-class ExtraButterDecorator {
-    +ExtraButterDecorator(inner: ISnack)
-    +getPrice(): Money
-    +getPrepTime(): number
-    +getDietaryTags(): Set<string>
-    +getDescription(): string
-}
-
-class ComboWrapDecorator {
-    +ComboWrapDecorator(inner: ISnack)
-    +getPrice(): Money
-    +getPrepTime(): number
-    +getDietaryTags(): Set<string>
-    +getDescription(): string
-}
-
-class GlutenFreePackagingDecorator {
-    +GlutenFreePackagingDecorator(inner: ISnack)
-    +getPrice(): Money
-    +getDietaryTags(): Set<string>
-    +getDescription(): string
-}
-
-ISnack <|.. BaseSnack
-ISnack <|.. SnackDecorator
-
-BaseSnack <|-- Popcorn
-BaseSnack <|-- Soda
-BaseSnack <|-- Nachos
-
-SnackDecorator <|-- LargeSizeDecorator
-SnackDecorator <|-- ExtraButterDecorator
-SnackDecorator <|-- ComboWrapDecorator
-SnackDecorator <|-- GlutenFreePackagingDecorator
-
-SnackDecorator o--> "1" ISnack : inner
-@enduml
-```
-
-### Composite Pattern Class Diagram (Theater Layout & Domain Integration)
-
-```plantuml
-@startuml
-skinparam classAttributeIconSize 0
-skinparam roundcorner 8
-skinparam shadowing false
-skinparam monochrome true
-
-interface SeatComponent <<interface>> {
-    +getId(): string
-    +getAvailableCount(): number
-    +getTotalCount(): number
-    +findAvailableSeats(count: number, contiguousOnly: boolean, preferredType?: SeatType): Seat[]
-    +reserveSeats(seatIds: string[]): boolean
-    +releaseSeats(seatIds: string[]): void
-    +getPriceSum(): number
-    +applyPriceAdjustment(predicate: (seat: Seat) => boolean, delta: number): void
-    +getOccupancyRate(): number
-}
-
-class Seat <<Leaf>> {
+class Seat <<Context>> {
     -id: string
-    -type: SeatType
-    -row: number
-    -number: number
-    -priceModifier: number
-    -isAvailable: boolean
-    +getId(): string
-    +getType(): SeatType
-    +getRow(): number
-    +getNumber(): number
-    +getPriceModifier(): number
-    +setPriceModifier(delta: number): void
+    -state: SeatState
+    +reserve(): void
+    +release(): void
+    +confirm(): void
+    +getState(): SeatState
+    +setState(state: SeatState): void
     +isSeatAvailable(): boolean
-    +setAvailable(status: boolean): void
-    +getAvailableCount(): number
-    +getTotalCount(): number
-    +findAvailableSeats(count: number, contiguousOnly: boolean, preferredType?: SeatType): Seat[]
-    +reserveSeats(seatIds: string[]): boolean
-    +releaseSeats(seatIds: string[]): void
-    +getPriceSum(): number
-    +applyPriceAdjustment(predicate: (seat: Seat) => boolean, delta: number): void
-    +getOccupancyRate(): number
 }
 
-class Row <<Composite>> {
-    -id: string
-    -rowNumber: number
-    -seats: Seat[]
-    +getId(): string
-    +getRowNumber(): number
-    +getSeats(): Seat[]
-    +addSeat(seat: Seat): void
-    +getAvailableCount(): number
-    +getTotalCount(): number
-    +getOccupancyRate(): number
-    +findAvailableSeats(count: number, contiguousOnly: boolean, preferredType?: SeatType): Seat[]
-    +reserveSeats(seatIds: string[]): boolean
-    +releaseSeats(seatIds: string[]): void
-    +getPriceSum(): number
-    +applyPriceAdjustment(predicate: (seat: Seat) => boolean, delta: number): void
-}
+SeatState <|.. AvailableState
+SeatState <|.. HeldState
+SeatState <|.. BookedState
+SeatState <|.. ReleasedState
 
-class Screen <<Composite Root>> {
-    -id: string
-    -name: string
-    -rows: Row[]
-    +getId(): string
-    +getName(): string
-    +getRows(): Row[]
-    +addRow(row: Row): void
-    +getSeats(): Seat[]
-    +getAvailableCount(): number
-    +getTotalCount(): number
-    +getOccupancyRate(): number
-    +findAvailableSeats(count: number, contiguousOnly: boolean, preferredType?: SeatType): Seat[]
-    +reserveSeats(seatIds: string[]): boolean
-    +releaseSeats(seatIds: string[]): void
-    +getPriceSum(): number
-    +applyPriceAdjustment(predicate: (seat: Seat) => boolean, delta: number): void
-}
+Seat o--> "1" SeatState : delegates lifecycle
+AvailableState ..> HeldState : transitions on reserve()
+HeldState ..> BookedState : transitions on confirm()
+HeldState ..> ReleasedState : transitions on release()
+BookedState ..> ReleasedState : transitions on cancel/release()
+ReleasedState ..> HeldState : transitions on re-reserve()
 
-SeatComponent <|.. Seat
-SeatComponent <|.. Row
-SeatComponent <|.. Screen
-
-Screen *--> "*" Row : rows
-Row *--> "*" Seat : seats
-
-class Show {
-    -id: string
-    -movie: Movie
-    -screen: Screen
-    -startTime: Date
-    -endTime: Date
-    +getScreen(): Screen
-}
-
-class Booking {
-    -id: string
-    -seats: Seat[]
-    -snacks: ISnack[]
-    -status: BookingStatus
-    -amount: Money
-    +getSeats(): Seat[]
-    +getSnacks(): ISnack[]
-}
-
-interface SeatAllocationStrategy <<interface>> {
-    +allocateSeats(show: Show, seats: Seat[]): boolean
-    +releaseSeats(show: Show, seats: Seat[]): void
-}
-
-class CompositeSeatAllocationStrategy {
-    +allocateSeats(show: Show, seats: Seat[]): boolean
-    +releaseSeats(show: Show, seats: Seat[]): void
-}
-
-Show o--> "1" Screen : screen
-Booking o--> "*" Seat : seats
-Booking o--> "*" ISnack : snacks
-SeatAllocationStrategy <|.. CompositeSeatAllocationStrategy
-CompositeSeatAllocationStrategy ..> Screen : calls reserveSeats / releaseSeats
+AvailableState ..> InvalidSeatStateException : throws on invalid ops
+HeldState ..> InvalidSeatStateException : throws on invalid ops
+BookedState ..> InvalidSeatStateException : throws on invalid ops
+ReleasedState ..> InvalidSeatStateException : throws on invalid ops
 @enduml
 ```
 
-### Strategy Pattern Class Diagram (Dynamic Pricing)
+---
+
+### 4. Chain of Responsibility Pattern Class Diagram (Payment Pipeline)
 
 ```plantuml
 @startuml
@@ -814,7 +562,138 @@ skinparam roundcorner 8
 skinparam shadowing false
 skinparam monochrome true
 
-interface PricingStrategy <<interface>> {
+interface PaymentHandler <<interface>> {
+    +setNext(handler: PaymentHandler): PaymentHandler
+    +handle(context: PaymentContext): PaymentResult
+}
+
+abstract class BasePaymentHandler {
+    #nextHandler: PaymentHandler | null
+    +setNext(handler: PaymentHandler): PaymentHandler
+    +handle(context: PaymentContext): PaymentResult
+    #passToNext(context: PaymentContext): PaymentResult
+}
+
+class CouponValidationHandler {
+    +handle(context: PaymentContext): PaymentResult
+}
+
+class WalletDeductionHandler {
+    +handle(context: PaymentContext): PaymentResult
+}
+
+class TaxComputationHandler {
+    +handle(context: PaymentContext): PaymentResult
+}
+
+class FinalPaymentGatewayHandler {
+    -gateway: PaymentGatewayStrategy
+    +FinalPaymentGatewayHandler(gateway: PaymentGatewayStrategy)
+    +handle(context: PaymentContext): PaymentResult
+}
+
+class PaymentChainBuilder {
+    -head: PaymentHandler | null
+    -tail: PaymentHandler | null
+    +add(handler: PaymentHandler): PaymentChainBuilder
+    +build(): PaymentHandler
+}
+
+class PaymentContext {
+    -amount: number
+    -originalAmount: number
+    -user: User
+    -coupon?: Coupon
+    -paymentDetails?: PaymentDetails
+    -walletDeducted: number
+    -taxApplied: number
+    +getAmount(): number
+    +deductAmount(delta: number): void
+    +addTax(delta: number): void
+    +getUser(): User
+    +getCoupon(): Coupon | undefined
+    +getPaymentDetails(): PaymentDetails | undefined
+}
+
+PaymentHandler <|.. BasePaymentHandler
+BasePaymentHandler <|-- CouponValidationHandler
+BasePaymentHandler <|-- WalletDeductionHandler
+BasePaymentHandler <|-- TaxComputationHandler
+BasePaymentHandler <|-- FinalPaymentGatewayHandler
+
+BasePaymentHandler o--> "0..1" PaymentHandler : nextHandler
+PaymentChainBuilder ..> PaymentHandler : builds pipeline
+PaymentHandler ..> PaymentContext : processes
+FinalPaymentGatewayHandler o--> "1" PaymentGatewayStrategy : invokes
+@enduml
+```
+
+---
+
+### 5. Template Method Pattern Class Diagram (Booking Workflows)
+
+```plantuml
+@startuml
+skinparam classAttributeIconSize 0
+skinparam roundcorner 8
+skinparam shadowing false
+skinparam monochrome true
+
+abstract class BookingWorkflow <<TemplateBase>> {
+    #seatAllocator: SeatAllocationStrategy
+    #paymentHandler: PaymentHandler
+    #notifier: NotificationService
+    #logger: LoggingService
+    #repo: BookingRepository
+    #lastCalculatedAmount: number
+    +constructor(...)
+    +processBooking(user: User, show: Show, seats: Seat[], coupon?: Coupon, details?: PaymentDetails): BookingResult
+    #{abstract} validateRequest(user: User, show: Show, seats: Seat[]): void
+    #{abstract} processPayment(user: User, show: Show, seats: Seat[], coupon?: Coupon, details?: PaymentDetails): void
+    #allocateSeats(show: Show, seats: Seat[]): void
+    #confirmSeats(seats: Seat[]): void
+    #rollbackSeats(show: Show, seats: Seat[]): void
+    #createBooking(user: User, show: Show, seats: Seat[], coupon?: Coupon): Booking
+    #sendConfirmation(user: User, show: Show, seats: Seat[], booking: Booking): void
+}
+
+class RegularBookingWorkflow {
+    -baseSeatPrice: number
+    +RegularBookingWorkflow(...)
+    #validateRequest(user: User, show: Show, seats: Seat[]): void
+    #processPayment(user: User, show: Show, seats: Seat[], coupon?: Coupon, details?: PaymentDetails): void
+}
+
+class CorporateBookingWorkflow {
+    -baseSeatPrice: number
+    -corporateDiscountPercentage: number
+    +CorporateBookingWorkflow(...)
+    #validateRequest(user: User, show: Show, seats: Seat[]): void
+    #processPayment(user: User, show: Show, seats: Seat[], coupon?: Coupon, details?: PaymentDetails): void
+}
+
+BookingWorkflow <|-- RegularBookingWorkflow
+BookingWorkflow <|-- CorporateBookingWorkflow
+
+BookingWorkflow o--> "1" SeatAllocationStrategy : seat allocation
+BookingWorkflow o--> "1" PaymentHandler : payment processing chain
+BookingWorkflow o--> "1" NotificationService : notifications
+BookingWorkflow o--> "1" BookingRepository : storage
+@enduml
+```
+
+---
+
+### 6. Strategy Pattern Class Diagram (Dynamic Pricing)
+
+```plantuml
+@startuml
+skinparam classAttributeIconSize 0
+skinparam roundcorner 8
+skinparam shadowing false
+skinparam monochrome true
+
+interface PricingStrategy <<Strategy>> {
     +calculatePrice(show: Show, seat: Seat, user: User): Money
 }
 
@@ -825,8 +704,8 @@ class WeekdayPricingStrategy {
 }
 
 class WeekendSurgePricingStrategy {
-    -surgeAmount: number
-    +WeekendSurgePricingStrategy(surgeAmount?: number)
+    -surgeMultiplier: number
+    +WeekendSurgePricingStrategy(surgeMultiplier?: number)
     +calculatePrice(show: Show, seat: Seat, user: User): Money
 }
 
@@ -867,7 +746,9 @@ BookingService o--> "1" PricingStrategy : injects
 @enduml
 ```
 
-### Observer Pattern Class Diagram (Real-Time Notifications)
+---
+
+### 7. Observer Pattern Class Diagram (Real-Time Notifications)
 
 ```plantuml
 @startuml
@@ -974,7 +855,9 @@ Observer ..> BookingEvent : receives
 @enduml
 ```
 
-### Command Pattern Class Diagram (Transactional Booking & Rollback)
+---
+
+### 8. Command Pattern Class Diagram (Transactional Booking & Rollback)
 
 ```plantuml
 @startuml
@@ -1061,7 +944,209 @@ BookingService ..> Command : creates & dispatches
 @enduml
 ```
 
-### Behavioral Architecture Overview Diagram
+---
+
+### 9. Decorator Pattern Class Diagram (Snack Add-ons)
+
+```plantuml
+@startuml
+skinparam classAttributeIconSize 0
+skinparam roundcorner 8
+skinparam shadowing false
+skinparam monochrome true
+
+interface ISnack <<interface>> {
+    +getId(): string
+    +getName(): string
+    +getPrice(): Money
+    +getPrepTime(): number
+    +getDietaryTags(): Set<string>
+    +getDescription(): string
+    +isComplimentary(): boolean
+}
+
+abstract class BaseSnack {
+    #id: string
+    #name: string
+    #price: Money
+    #prepTime: number
+    #dietaryTags: Set<string>
+    #description: string
+    #complimentary: boolean
+    +getId(): string
+    +getName(): string
+    +getPrice(): Money
+    +getPrepTime(): number
+    +getDietaryTags(): Set<string>
+    +getDescription(): string
+    +isComplimentary(): boolean
+}
+
+class Popcorn {
+    +Popcorn(id?: string, price?: Money)
+}
+
+class Soda {
+    +Soda(id?: string, price?: Money)
+}
+
+class Nachos {
+    +Nachos(id?: string, price?: Money)
+}
+
+abstract class SnackDecorator {
+    #inner: ISnack
+    +SnackDecorator(inner: ISnack)
+    +getId(): string
+    +getName(): string
+    +getPrice(): Money
+    +getPrepTime(): number
+    +getDietaryTags(): Set<string>
+    +getDescription(): string
+    +isComplimentary(): boolean
+}
+
+class LargeSizeDecorator {
+    +LargeSizeDecorator(inner: ISnack)
+    +getPrice(): Money
+    +getPrepTime(): number
+    +getDescription(): string
+}
+
+class ExtraButterDecorator {
+    +ExtraButterDecorator(inner: ISnack)
+    +getPrice(): Money
+    +getPrepTime(): number
+    +getDietaryTags(): Set<string>
+    +getDescription(): string
+}
+
+class ComboWrapDecorator {
+    +ComboWrapDecorator(inner: ISnack)
+    +getPrice(): Money
+    +getPrepTime(): number
+    +getDietaryTags(): Set<string>
+    +getDescription(): string
+}
+
+class GlutenFreePackagingDecorator {
+    +GlutenFreePackagingDecorator(inner: ISnack)
+    +getPrice(): Money
+    +getDietaryTags(): Set<string>
+    +getDescription(): string
+}
+
+ISnack <|.. BaseSnack
+ISnack <|.. SnackDecorator
+
+BaseSnack <|-- Popcorn
+BaseSnack <|-- Soda
+BaseSnack <|-- Nachos
+
+SnackDecorator <|-- LargeSizeDecorator
+SnackDecorator <|-- ExtraButterDecorator
+SnackDecorator <|-- ComboWrapDecorator
+SnackDecorator <|-- GlutenFreePackagingDecorator
+
+SnackDecorator o--> "1" ISnack : wraps inner snack
+@enduml
+```
+
+---
+
+### 10. Composite Pattern Class Diagram (Theater Layout)
+
+```plantuml
+@startuml
+skinparam classAttributeIconSize 0
+skinparam roundcorner 8
+skinparam shadowing false
+skinparam monochrome true
+
+interface SeatComponent <<interface>> {
+    +getId(): string
+    +getAvailableCount(): number
+    +getTotalCount(): number
+    +findAvailableSeats(count: number, contiguousOnly: boolean, preferredType?: SeatType): Seat[]
+    +reserveSeats(seatIds: string[]): boolean
+    +releaseSeats(seatIds: string[]): void
+    +getPriceSum(): number
+    +applyPriceAdjustment(predicate: (seat: Seat) => boolean, delta: number): void
+    +getOccupancyRate(): number
+}
+
+class Seat <<Leaf>> {
+    -id: string
+    -type: SeatType
+    -row: number
+    -number: number
+    -priceModifier: number
+    -state: SeatState
+    +getId(): string
+    +getType(): SeatType
+    +getRow(): number
+    +getNumber(): number
+    +getPriceModifier(): number
+    +setPriceModifier(delta: number): void
+    +isSeatAvailable(): boolean
+    +getAvailableCount(): number
+    +getTotalCount(): number
+    +findAvailableSeats(count: number, contiguousOnly: boolean, preferredType?: SeatType): Seat[]
+    +reserveSeats(seatIds: string[]): boolean
+    +releaseSeats(seatIds: string[]): void
+    +getPriceSum(): number
+    +applyPriceAdjustment(predicate: (seat: Seat) => boolean, delta: number): void
+    +getOccupancyRate(): number
+}
+
+class Row <<Composite>> {
+    -id: string
+    -rowNumber: number
+    -seats: Seat[]
+    +getId(): string
+    +getRowNumber(): number
+    +getSeats(): Seat[]
+    +addSeat(seat: Seat): void
+    +getAvailableCount(): number
+    +getTotalCount(): number
+    +getOccupancyRate(): number
+    +findAvailableSeats(count: number, contiguousOnly: boolean, preferredType?: SeatType): Seat[]
+    +reserveSeats(seatIds: string[]): boolean
+    +releaseSeats(seatIds: string[]): void
+    +getPriceSum(): number
+    +applyPriceAdjustment(predicate: (seat: Seat) => boolean, delta: number): void
+}
+
+class Screen <<Composite>> {
+    -id: string
+    -name: string
+    -rows: Row[]
+    +getId(): string
+    +getName(): string
+    +getRows(): Row[]
+    +addRow(row: Row): void
+    +getAvailableCount(): number
+    +getTotalCount(): number
+    +getOccupancyRate(): number
+    +findAvailableSeats(count: number, contiguousOnly: boolean, preferredType?: SeatType): Seat[]
+    +reserveSeats(seatIds: string[]): boolean
+    +releaseSeats(seatIds: string[]): void
+    +getPriceSum(): number
+    +applyPriceAdjustment(predicate: (seat: Seat) => boolean, delta: number): void
+}
+
+SeatComponent <|.. Seat
+SeatComponent <|.. Row
+SeatComponent <|.. Screen
+
+Screen o--> "*" Row : contains rows
+Row o--> "*" Seat : contains seats
+@enduml
+```
+
+---
+
+### 11. Behavioral Architecture Overview Diagram
 
 ```plantuml
 @startuml
@@ -1092,6 +1177,22 @@ class BookingInvoker <<Invoker>> {
     +rollback(): void
 }
 
+interface SeatState <<State>> {
+    +reserve(seat: Seat): void
+    +release(seat: Seat): void
+    +confirm(seat: Seat): void
+    +getStatus(): SeatStatus
+}
+
+interface PaymentHandler <<ChainOfResponsibility>> {
+    +setNext(handler: PaymentHandler): PaymentHandler
+    +handle(context: PaymentContext): PaymentResult
+}
+
+abstract class BookingWorkflow <<TemplateMethod>> {
+    +processBooking(user: User, show: Show, seats: Seat[], coupon?: Coupon, details?: PaymentDetails): BookingResult
+}
+
 class BookingService <<Client / Orchestrator>> {
     -pricing: PricingStrategy
     -notifier: NotificationService
@@ -1103,6 +1204,9 @@ BookingService o--> "1" PricingStrategy : dynamic pricing
 BookingService o--> "1" Subject : publishes events
 BookingService ..> BookingInvoker : executes pipelines
 BookingInvoker o--> "*" Command : manages & rolls back
+
+BookingWorkflow o--> "1" PaymentHandler : payment pipeline
+BookingWorkflow ..> SeatState : manages seat lifecycle
 @enduml
 ```
 
@@ -1110,6 +1214,6 @@ BookingInvoker o--> "*" Command : manages & rolls back
 
 ## 📑 Assignment Deliverables
 
-- [UML_Diagrams.pdf](UML_Diagrams.pdf): High-resolution PDF compiling all behavioral pattern class diagrams and system architecture.
-- [Design_Note.pdf](Design_Note.pdf): 642-word design explanation covering Strategy maintainability, Observer extensibility, and Command transactional rollback.
-- [Code_Pseudocode.txt](Code_Pseudocode.txt): Clean, comment-free technical specification of classes, interfaces, and pseudocode algorithms.
+- [UML_Diagrams.pdf](UML_Diagrams.pdf): High-resolution architectural diagram documentation compiling class models, state transitions, pipelines, and workflows.
+- [Design_Note.pdf](Design_Note.pdf): Technical design justification note detailing pattern trade-offs, state machine invariants, payment pipeline decoupling, and transactional recovery.
+- [Code_Pseudocode.txt](Code_Pseudocode.txt): Clean, comment-free technical specification of classes, interfaces, and pseudocode algorithms for State, Template Method, and Chain of Responsibility patterns.
