@@ -5,6 +5,7 @@ import {
   runCommandDemos,
   runStateDemos,
   runChainAndWorkflowDemos,
+  runExtensionDemos,
 } from "./scenarios";
 
 function main(): void {
@@ -14,6 +15,7 @@ function main(): void {
   runCommandDemos();
   runStateDemos();
   runChainAndWorkflowDemos();
+  runExtensionDemos();
 }
 
 main();

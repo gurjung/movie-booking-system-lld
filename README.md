@@ -53,6 +53,7 @@ The codebase is organized into cleanly decoupled layers separating domain models
    - Decouples volatile algorithmic logic from core booking orchestrators.
    - **Pricing Strategies**: `WeekdayPricingStrategy` (weekday concession), `WeekendSurgePricingStrategy` (weekend demand surge), `FestivalDiscountPricingStrategy` (promotional festival discounts), `PeakHourPricingStrategy`, `VIPPricingStrategy`, and `DefaultPricingStrategy`.
    - **Seat Allocation Strategies**: `InMemorySeatAllocationStrategy` and `CompositeSeatAllocationStrategy`.
+   - **Seat Recommendation Strategies**: `BestAvailableRecommendationStrategy` (optimal viewing center-aisle selection) and `BudgetFriendlyRecommendationStrategy` (lowest price modifier prioritization).
    - **Payment Gateway Strategies**: `MockPaymentGateway` with failure simulation capability.
 
 2. **Observer Pattern (Real-Time Multi-Channel Notifications)**:
@@ -164,7 +165,7 @@ npm start
 
 ## 🧪 Comprehensive Demo Scenarios
 
-The test suite runs 15 end-to-end scenarios covering all implemented design patterns:
+The test suite runs 16 end-to-end scenarios covering all implemented design patterns:
 
 | # | Pattern / Category | Scenario Description |
 |---|---|---|
@@ -183,6 +184,7 @@ The test suite runs 15 end-to-end scenarios covering all implemented design patt
 | **13** | Chain of Responsibility | Modular payment pipeline: Coupon validation → Wallet balance deduction → GST tax computation → Gateway charge. |
 | **14** | Template Method | Regular vs Corporate booking workflows: Max seat limits vs Bulk discounts (5+ seats, 20% discount). |
 | **15** | Workflow Rollback | Complete booking workflow failure handling with automatic seat release and recovery re-booking. |
+| **16** | Extension Scenario (OCP) | Dynamic seat recommendations via `SeatRecommendationStrategy` (`BestAvailable` vs `BudgetFriendly`). |
 
 ---
 
@@ -1214,6 +1216,7 @@ BookingWorkflow ..> SeatState : manages seat lifecycle
 
 ## 📑 Assignment Deliverables
 
+- [DESIGN_DOCUMENT.md](DESIGN_DOCUMENT.md): Capstone design document covering SOLID justification, pattern mappings, persistence abstraction, concurrency controls, and the dynamic recommendation extension.
 - [UML_Diagrams.pdf](UML_Diagrams.pdf): High-resolution architectural diagram documentation compiling class models, state transitions, pipelines, and workflows.
 - [Design_Note.pdf](Design_Note.pdf): Technical design justification note detailing pattern trade-offs, state machine invariants, payment pipeline decoupling, and transactional recovery.
 - [Code_Pseudocode.txt](Code_Pseudocode.txt): Clean, comment-free technical specification of classes, interfaces, and pseudocode algorithms for State, Template Method, and Chain of Responsibility patterns.
