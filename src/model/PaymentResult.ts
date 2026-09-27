@@ -36,4 +36,12 @@ export class PaymentResult {
   public setFailureReason(failureReason: string | null): void {
     this.failureReason = failureReason;
   }
+
+  public static success(transactionId: string | null = "TXN-SUCCESS"): PaymentResult {
+    return new PaymentResult(true, transactionId, null);
+  }
+
+  public static fail(failureReason: string): PaymentResult {
+    return new PaymentResult(false, null, failureReason);
+  }
 }
