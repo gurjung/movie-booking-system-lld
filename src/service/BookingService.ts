@@ -6,7 +6,7 @@ import {
   PricingStrategy,
   SeatAllocationStrategy,
 } from "../interfaces";
-import { Booking, Money, PaymentDetails } from "../model";
+import { Booking, Coupon, Money, PaymentDetails, Seat, Show, User } from "../model";
 import { BookingResult } from "../model/BookingResult";
 import { BookingRepository } from "../repository/BookingRepository";
 import {
@@ -15,6 +15,7 @@ import {
   ReserveSeatCommand,
   SelectSeatCommand,
 } from "../command";
+import { BookingWorkflow } from "../workflow";
 
 export class BookingService {
   private seatAllocator: SeatAllocationStrategy;
@@ -158,6 +159,17 @@ export class BookingService {
     this.notifier.notify(user, booking);
 
     return BookingResult.success(booking);
+  }
+
+  public bookWithWorkflow(
+    workflow: BookingWorkflow,
+    user: User,
+    show: Show,
+    seats: Seat[],
+    coupon?: Coupon,
+    paymentDetails?: PaymentDetails,
+  ): BookingResult {
+    return workflow.processBooking(user, show, seats, coupon, paymentDetails);
   }
 }
 

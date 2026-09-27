@@ -6,6 +6,7 @@ export class User {
   private email: string;
   private phone: string;
   private address: Address;
+  private walletBalance: number;
 
   constructor(
     id: string,
@@ -13,12 +14,14 @@ export class User {
     email: string,
     phone: string,
     address: Address,
+    walletBalance: number = 0,
   ) {
     this.id = id;
     this.name = name;
     this.email = email;
     this.phone = phone;
     this.address = address;
+    this.walletBalance = walletBalance;
   }
 
   public getId(): string {
@@ -59,5 +62,13 @@ export class User {
 
   public setAddress(address: Address): void {
     this.address = address;
+  }
+
+  public getWalletBalance(): number {
+    return this.walletBalance;
+  }
+
+  public setWalletBalance(balance: number): void {
+    this.walletBalance = balance;
   }
 }
